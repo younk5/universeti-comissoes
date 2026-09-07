@@ -38,7 +38,7 @@ O usuário precisa registrar comissões de vários vendedores, consultar o hist�
 | ID | História de usuário | Critérios de aceite |
 |---|---|---|
 | F01 | Cadastrar vendedor | O formulário bloqueia nome vazio, aceita somente o nome e atualiza a lista imediatamente. |
-| F02 | Editar ou excluir vendedor | A edição atualiza o cadastro; a exclusão pede confirmação e é bloqueada enquanto existirem movimentações na carteira, para preservar o histórico. |
+| F02 | Editar ou excluir vendedor | A edição atualiza o cadastro. A exclusão pede confirmação; se houver movimentações, o aviso informa que todas as comissões e retiradas vinculadas também serão apagadas. |
 | F03 | Registrar comissão | Exige vendedor, valor de venda e tipo/valor de comissão. Produto e observação são opcionais. A data inicia no dia atual, mas pode ser alterada. |
 | F04 | Calcular comissão percentual | Ao escolher percentual, o valor calculado é `valor da venda × percentual ÷ 100`; o valor persistido é o resultado calculado no momento do registro. |
 | F05 | Registrar comissão fixa | Ao escolher valor fixo, o valor informado é salvo como valor da comissão, sem recálculo. |
@@ -121,7 +121,7 @@ localStorage key: controle-comissoes.v1
 5. **Edição:** o registro existente preenche o mesmo formulário; salvar atualiza em vez de duplicar, sem permitir que uma carteira fique negativa.
 6. **Filtros:** qualquer alteração atualiza tabela, cartões, gráfico e conjunto exportado.
 7. **Erros:** campos obrigatórios vazios, números inválidos, valores negativos, retirada maior que o saldo da carteira e período invertido apresentam mensagens específicas próximas ao formulário.
-8. **Exclusões:** vendedor, comissão ou retirada pedem confirmação nativa antes da ação; a comissão não pode ser excluída se a carteira correspondente ficar negativa.
+8. **Exclusões:** vendedor, comissão ou retirada pedem confirmação nativa antes da ação. Ao excluir um vendedor, o aviso apresenta as comissões e retiradas que também serão apagadas; uma comissão isolada não pode ser excluída se a carteira correspondente ficar negativa.
 9. **Falha de armazenamento:** erro de `localStorage` informa o usuário sem afirmar que a alteração foi salva.
 
 ## 9. Riscos e mitigação
@@ -130,7 +130,7 @@ localStorage key: controle-comissoes.v1
 |---|---|---|
 | Limpeza de dados do navegador | perda dos dados locais | aviso no README e exportação CSV disponível |
 | Erro de digitação em valores | comissão incorreta | validação, prévia do cálculo e edição do registro |
-| Exclusão acidental | perda de histórico ou saldo incorreto | confirmação, bloqueio de vendedor com movimentações e proteção contra carteira negativa |
+| Exclusão acidental | perda de histórico ou saldo incorreto | confirmação com contagem de movimentações vinculadas e proteção contra carteira negativa na exclusão isolada de comissão |
 | Dados sem vendedor por edição manual do armazenamento | histórico inconsistente | usar `sellerName` como fallback visual |
 
 ## 10. Critérios finais de aceite

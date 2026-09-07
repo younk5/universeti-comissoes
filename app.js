@@ -91,6 +91,15 @@ function sellerHasMovements(state, sellerId) {
     || (state.withdrawals || []).some((withdrawal) => withdrawal.sellerId === sellerId);
 }
 
+function removeSellerAndMovements(state, sellerId) {
+  return {
+    ...state,
+    sellers: state.sellers.filter((seller) => seller.id !== sellerId),
+    commissions: state.commissions.filter((commission) => commission.sellerId !== sellerId),
+    withdrawals: (state.withdrawals || []).filter((withdrawal) => withdrawal.sellerId !== sellerId),
+  };
+}
+
 function validateCommission(input, sellers) {
   const seller = sellers.find((item) => item.id === input.sellerId);
   if (!seller) return { valid: false, error: 'Selecione um vendedor.' };
@@ -297,6 +306,7 @@ const CommissionLogic = {
   validateSeller,
   sellerHasCommissions,
   sellerHasMovements,
+  removeSellerAndMovements,
   validateCommission,
   createCommission,
   filterCommissions,
@@ -459,16 +469,25 @@ if (typeof document !== 'undefined') {
             dom.sellerName.focus();
           }),
           createButton('Excluir vendedor', 'button button-danger', () => {
-            if (sellerHasMovements(state, seller.id)) {
-              showMessage('Não é possível excluir este vendedor porque há movimentações na carteira.', 'error');
-              return;
-            }
-            if (!window.confirm(`Excluir o vendedor ${seller.name}?`)) return;
-            state.sellers = state.sellers.filter((item) => item.id !== seller.id);
+            const commissionCount = state.commissions.filter((commission) => commission.sellerId === seller.id).length;
+            const withdrawalCount = state.withdrawals.filter((withdrawal) => withdrawal.sellerId === seller.id).length;
+            const linkedRecords = [
+              commissionCount && `${commissionCount} ${commissionCount === 1 ? 'comissão' : 'comissões'}`,
+              withdrawalCount && `${withdrawalCount} ${withdrawalCount === 1 ? 'retirada' : 'retiradas'}`,
+            ].filter(Boolean).join(' e ');
+            const confirmation = linkedRecords
+              ? `Excluir ${seller.name} e ${linkedRecords}? Todo o histórico da carteira será apagado.`
+              : `Excluir o vendedor ${seller.name}?`;
+
+            if (!window.confirm(confirmation)) return;
+            const nextState = removeSellerAndMovements(state, seller.id);
+            state.sellers = nextState.sellers;
+            state.commissions = nextState.commissions;
+            state.withdrawals = nextState.withdrawals;
             if (!persistState()) return;
             if (editingSellerId === seller.id) resetSellerForm();
             renderAll();
-            showMessage('Vendedor excluído.', 'success');
+            showMessage(linkedRecords ? 'Vendedor e movimentações excluídos.' : 'Vendedor excluído.', 'success');
           }),
         );
 

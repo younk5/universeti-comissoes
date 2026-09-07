@@ -43,6 +43,8 @@ Em **Carteira e retirada**, escolha o vendedor, informe o valor, a data e uma ob
 
 Uma comissão que já tenha sido retirada não pode ser excluída nem reduzida a ponto de deixar a carteira negativa.
 
+Ao excluir um vendedor, o app informa quantas comissões e retiradas serão removidas junto. Confirme somente quando quiser apagar toda a carteira daquele vendedor.
+
 ## Filtros, ordenação e exportação
 
 - Filtre por vendedor e/ou por data inicial e final.

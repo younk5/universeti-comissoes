@@ -23,7 +23,7 @@ test('gera data local no formato de campo date', () => {
   assert.match(todayLocal(), /^\d{4}-\d{2}-\d{2}$/);
 });
 
-const { createEmptyState, sanitizeState, validateSeller, sellerHasCommissions, sellerHasMovements } = require('../app.js');
+const { createEmptyState, sanitizeState, validateSeller, sellerHasCommissions, sellerHasMovements, removeSellerAndMovements } = require('../app.js');
 
 test('normaliza estado corrompido em coleções vazias', () => {
   assert.deepEqual(sanitizeState({ sellers: 'erro', commissions: null }), createEmptyState());
@@ -60,6 +60,21 @@ test('protege vendedor que tenha retiradas na carteira', () => {
 
 const { validateCommission, createCommission } = require('../app.js');
 const commissionSellers = [{ id: 'v1', name: 'Ana' }];
+
+test('permite excluir vendedor junto com as movimentações da carteira após confirmação', () => {
+  const state = {
+    sellers: [{ id: 'ana', name: 'Ana' }, { id: 'bruno', name: 'Bruno' }],
+    commissions: [{ id: 'c1', sellerId: 'ana' }, { id: 'c2', sellerId: 'bruno' }],
+    withdrawals: [{ id: 'r1', sellerId: 'ana' }],
+  };
+
+  assert.deepEqual(removeSellerAndMovements(state, 'ana'), {
+    sellers: [{ id: 'bruno', name: 'Bruno' }],
+    commissions: [{ id: 'c2', sellerId: 'bruno' }],
+    withdrawals: [],
+  });
+  assert.equal(state.sellers.length, 2);
+});
 
 test('valida campos obrigatórios da comissão', () => {
   assert.deepEqual(validateCommission({
