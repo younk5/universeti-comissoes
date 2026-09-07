@@ -22,6 +22,60 @@
     <main id="conteudo" class="container page-content" tabindex="-1">
       <p id="app-message" class="app-message" role="status" aria-live="polite" hidden></p>
 
+      <section id="comissoes" class="panel" aria-labelledby="comissoes-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Lançamento de venda</p>
+            <h2 id="comissoes-title">Registrar comissão</h2>
+          </div>
+        </div>
+
+        <form id="commission-form" novalidate>
+          <fieldset id="commission-fields">
+            <div class="field-grid">
+              <div class="field">
+                <label for="commission-seller">Vendedor <span aria-hidden="true">*</span></label>
+                <select id="commission-seller" name="sellerId" required></select>
+              </div>
+              <div class="field">
+                <label for="commission-product">Produto ou serviço</label>
+                <input id="commission-product" name="product" type="text" autocomplete="off">
+              </div>
+              <div class="field">
+                <label for="commission-sale-value">Valor da venda <span aria-hidden="true">*</span></label>
+                <input id="commission-sale-value" name="saleValue" type="text" inputmode="decimal" placeholder="Ex.: 1.500,00" required>
+              </div>
+              <div class="field">
+                <label for="commission-type">Tipo de comissão <span aria-hidden="true">*</span></label>
+                <select id="commission-type" name="commissionType" required>
+                  <option value="percentage">Percentual (%)</option>
+                  <option value="fixed">Valor fixo (R$)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label id="commission-input-label" for="commission-input">Percentual <span aria-hidden="true">*</span></label>
+                <input id="commission-input" name="commissionInput" type="text" inputmode="decimal" placeholder="Ex.: 10" required>
+              </div>
+              <div class="field">
+                <label for="commission-date">Data da venda <span aria-hidden="true">*</span></label>
+                <input id="commission-date" name="saleDate" type="date" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="commission-note">Observação</label>
+              <textarea id="commission-note" name="note" rows="3"></textarea>
+            </div>
+            <p id="commission-error" class="error-message" role="alert" hidden></p>
+            <output id="commission-preview" class="commission-preview">Informe os valores para calcular a comissão.</output>
+            <div class="form-actions">
+              <button id="commission-submit" class="button" type="submit">Salvar comissão</button>
+              <button id="commission-cancel" class="button button-secondary" type="button" hidden>Cancelar edição</button>
+            </div>
+          </fieldset>
+        </form>
+        <p id="commission-empty" class="form-hint" hidden>Cadastre um vendedor antes de registrar uma comissão.</p>
+      </section>
+
       <section id="vendedores" class="panel" aria-labelledby="vendedores-title">
         <div class="section-heading">
           <div>
