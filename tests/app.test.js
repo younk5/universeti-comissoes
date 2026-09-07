@@ -22,3 +22,22 @@ test('calcula comissão percentual e fixa', () => {
 test('gera data local no formato de campo date', () => {
   assert.match(todayLocal(), /^\d{4}-\d{2}-\d{2}$/);
 });
+
+const { createEmptyState, sanitizeState, validateSeller, sellerHasCommissions } = require('../app.js');
+
+test('normaliza estado corrompido em coleções vazias', () => {
+  assert.deepEqual(sanitizeState({ sellers: 'erro', commissions: null }), createEmptyState());
+});
+
+test('exige nome para cadastrar vendedor', () => {
+  assert.deepEqual(validateSeller({ name: '   ', contact: '' }), {
+    valid: false,
+    error: 'Informe o nome do vendedor.',
+  });
+  assert.equal(validateSeller({ name: 'Ana', contact: 'ana@empresa.com' }).valid, true);
+});
+
+test('identifica vendedor com comissões vinculadas', () => {
+  assert.equal(sellerHasCommissions({ commissions: [{ sellerId: 'v1' }] }, 'v1'), true);
+  assert.equal(sellerHasCommissions({ commissions: [{ sellerId: 'v1' }] }, 'v2'), false);
+});

@@ -21,6 +21,35 @@
 
     <main id="conteudo" class="container page-content" tabindex="-1">
       <p id="app-message" class="app-message" role="status" aria-live="polite" hidden></p>
+
+      <section id="vendedores" class="panel" aria-labelledby="vendedores-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Base de vendedores</p>
+            <h2 id="vendedores-title">Vendedores</h2>
+          </div>
+        </div>
+
+        <form id="seller-form" novalidate>
+          <div class="field-grid">
+            <div class="field">
+              <label for="seller-name">Nome do vendedor <span aria-hidden="true">*</span></label>
+              <input id="seller-name" name="name" type="text" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="seller-contact">Telefone ou e-mail</label>
+              <input id="seller-contact" name="contact" type="text" autocomplete="email">
+            </div>
+          </div>
+          <p id="seller-error" class="error-message" role="alert" hidden></p>
+          <div class="form-actions">
+            <button id="seller-submit" class="button" type="submit">Cadastrar vendedor</button>
+            <button id="seller-cancel" class="button button-secondary" type="button" hidden>Cancelar edição</button>
+          </div>
+        </form>
+
+        <ul id="seller-list" class="seller-list" aria-label="Vendedores cadastrados"></ul>
+      </section>
     </main>
   </body>
 </html>
