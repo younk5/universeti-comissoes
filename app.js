@@ -172,6 +172,24 @@ function summarizeCommissions(commissions) {
   return { total, count: commissions.length, bySeller };
 }
 
+function escapeCsv(value) {
+  const text = String(value ?? '');
+  return /[;"\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function buildCommissionCsv(commissions) {
+  const header = ['Vendedor', 'Produto ou serviço', 'Valor da venda', 'Valor da comissão', 'Data', 'Observação'];
+  const rows = commissions.map((item) => [
+    item.sellerName,
+    item.product,
+    formatCurrency(item.saleValue),
+    formatCurrency(item.commissionValue),
+    item.saleDate,
+    item.note,
+  ]);
+  return `\uFEFF${[header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\r\n')}`;
+}
+
 const CommissionLogic = {
   STORAGE_KEY,
   normalizeMoney,
@@ -190,6 +208,7 @@ const CommissionLogic = {
   filterCommissions,
   sortCommissions,
   summarizeCommissions,
+  buildCommissionCsv,
 };
 
 if (typeof window !== 'undefined') window.CommissionLogic = CommissionLogic;
@@ -227,6 +246,7 @@ if (typeof document !== 'undefined') {
       filterEndDate: document.querySelector('#filter-end-date'),
       filterError: document.querySelector('#filter-error'),
       filterClear: document.querySelector('#filter-clear'),
+      exportCsv: document.querySelector('#export-csv'),
       summaryTotal: document.querySelector('#summary-total'),
       summaryCount: document.querySelector('#summary-count'),
       summarySellers: document.querySelector('#summary-sellers'),
@@ -563,6 +583,17 @@ if (typeof document !== 'undefined') {
       }
     }
 
+    function downloadCsv(content, filename) {
+      const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
     function renderAll() {
       renderSellers();
       renderCommissionSellerOptions();
@@ -676,6 +707,20 @@ if (typeof document !== 'undefined') {
       showFilterError();
       renderSummary();
       renderHistory();
+    });
+    dom.exportCsv.addEventListener('click', () => {
+      const { startDate, endDate } = getCurrentFilters();
+      if (startDate && endDate && startDate > endDate) {
+        showFilterError('A data inicial não pode ser posterior à data final.');
+        return;
+      }
+      const commissions = getVisibleCommissions();
+      if (!commissions.length) {
+        showMessage('Não há comissões para exportar com os filtros atuais.', 'info');
+        return;
+      }
+      downloadCsv(buildCommissionCsv(commissions), `comissoes-${todayLocal()}.csv`);
+      showMessage('CSV exportado.', 'success');
     });
     for (const button of dom.sortButtons) {
       button.addEventListener('click', () => {

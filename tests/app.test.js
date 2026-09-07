@@ -97,3 +97,15 @@ test('calcula total e subtotal por vendedor', () => {
     ],
   });
 });
+
+const { buildCommissionCsv } = require('../app.js');
+
+test('gera CSV com BOM, ponto e vírgula e campos escapados', () => {
+  const csv = buildCommissionCsv([{
+    sellerName: 'Ana', product: 'Plano; Premium', saleValue: 1200,
+    commissionValue: 120, saleDate: '2026-09-07', note: 'Disse "ok"',
+  }]);
+  assert.ok(csv.startsWith('\uFEFFVendedor;Produto ou serviço;Valor da venda;Valor da comissão;Data;Observação'));
+  assert.match(csv, /"Plano; Premium"/);
+  assert.match(csv, /"Disse ""ok"""/);
+});
