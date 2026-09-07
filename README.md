@@ -1,6 +1,6 @@
-# Controle de Comissões
+# Galaxy Smart — Controle de Comissões
 
-Aplicação web local para cadastrar vendedores, registrar vendas e acompanhar comissões.
+Painel interno da Galaxy Smart para controlar vendedores, registrar vendas e definir as comissões a pagar.
 
 ## Como abrir
 
