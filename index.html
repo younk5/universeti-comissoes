@@ -31,7 +31,9 @@
           </div>
         </div>
         <div class="summary-grid">
+          <article class="summary-card summary-card-balance"><p>Saldo disponível</p><strong id="summary-balance">R$ 0,00</strong></article>
           <article class="summary-card"><p>Total de comissões</p><strong id="summary-total">R$ 0,00</strong></article>
+          <article class="summary-card"><p>Total retirado</p><strong id="summary-withdrawals">R$ 0,00</strong></article>
           <article class="summary-card"><p>Registros no período</p><strong id="summary-count">0</strong></article>
           <article class="summary-card"><p>Vendedores com comissão</p><strong id="summary-sellers">0</strong></article>
         </div>
@@ -92,7 +94,10 @@
             </div>
           </fieldset>
         </form>
-        <p id="commission-empty" class="form-hint" hidden>Cadastre um vendedor antes de registrar uma comissão.</p>
+        <p id="commission-empty" class="form-hint commission-onboarding" hidden>
+          Cadastre o primeiro vendedor para liberar o registro de comissão.
+          <a class="button button-secondary" href="#vendedores">Cadastrar vendedor</a>
+        </p>
       </section>
 
       <section id="vendedores" class="panel panel-sellers" aria-labelledby="vendedores-title">
@@ -103,14 +108,10 @@
         </div>
 
         <form id="seller-form" novalidate>
-          <div class="field-grid">
+          <div class="field-grid seller-field-grid">
             <div class="field">
               <label for="seller-name">Nome do vendedor <span aria-hidden="true">*</span></label>
               <input id="seller-name" name="name" type="text" autocomplete="name" required>
-            </div>
-            <div class="field">
-              <label for="seller-contact">Telefone ou e-mail</label>
-              <input id="seller-contact" name="contact" type="text" autocomplete="email">
             </div>
           </div>
           <p id="seller-error" class="error-message" role="alert" hidden></p>
@@ -123,6 +124,55 @@
         <ul id="seller-list" class="seller-list" aria-label="Vendedores cadastrados"></ul>
       </section>
       </div>
+
+      <section id="carteiras" class="panel panel-wallets" aria-labelledby="wallets-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="wallets-title">Carteiras dos vendedores</h2>
+          </div>
+        </div>
+        <div id="wallet-list" class="wallet-grid" aria-live="polite"></div>
+      </section>
+
+      <section id="retiradas" class="panel panel-withdrawals" aria-labelledby="withdrawals-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="withdrawals-title">Carteira e retirada</h2>
+          </div>
+        </div>
+        <div class="withdrawal-layout">
+          <form id="withdrawal-form" novalidate>
+            <div class="field-grid withdrawal-field-grid">
+              <div class="field">
+                <label for="withdrawal-seller">Vendedor <span aria-hidden="true">*</span></label>
+                <select id="withdrawal-seller" name="sellerId" required></select>
+              </div>
+              <div class="field">
+                <label for="withdrawal-value">Valor retirado <span aria-hidden="true">*</span></label>
+                <input id="withdrawal-value" name="value" type="text" inputmode="decimal" placeholder="Ex.: 150,00" required>
+              </div>
+              <div class="field">
+                <label for="withdrawal-date">Data da retirada <span aria-hidden="true">*</span></label>
+                <input id="withdrawal-date" name="withdrawalDate" type="date" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="withdrawal-note">Observação</label>
+              <textarea id="withdrawal-note" name="note" rows="2"></textarea>
+            </div>
+            <p id="withdrawal-error" class="error-message" role="alert" hidden></p>
+            <output id="withdrawal-preview" class="commission-preview withdrawal-preview">Saldo disponível: R$ 0,00.</output>
+            <div class="form-actions">
+              <button id="withdrawal-submit" class="button" type="submit">Registrar retirada</button>
+            </div>
+          </form>
+
+          <div class="withdrawal-history">
+            <h3 id="wallet-history-title">Movimentações da carteira</h3>
+            <ul id="wallet-movement-list" class="withdrawal-list" aria-live="polite"></ul>
+          </div>
+        </div>
+      </section>
 
       <section id="historico" class="panel panel-history" aria-labelledby="historico-title">
         <div class="section-heading">

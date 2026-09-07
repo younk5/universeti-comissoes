@@ -1,7 +1,7 @@
 # PRD — Controle de Comissões
 
 **Status:** validado para especificação em 07/09/2026
-**Versão:** 1.0
+**Versão:** 1.1
 
 ## 1. Visão geral
 
@@ -17,7 +17,7 @@ O usuário precisa registrar comissões de vários vendedores, consultar o hist�
 
 | Item | Situação | Decisão |
 |---|---|---|
-| Cadastro de vendedor | Confirmado | nome obrigatório; telefone ou e-mail opcional |
+| Cadastro de vendedor | Confirmado | somente nome obrigatório |
 | Registro de comissão | Confirmado | vendedor, venda, tipo/valor da comissão, data e observação |
 | Persistência | Confirmado | `localStorage`, sem servidor |
 | Relatórios | Confirmado | total geral, total por vendedor, gráfico simples |
@@ -37,16 +37,17 @@ O usuário precisa registrar comissões de vários vendedores, consultar o hist�
 
 | ID | História de usuário | Critérios de aceite |
 |---|---|---|
-| F01 | Cadastrar vendedor | O formulário bloqueia nome vazio, aceita contato opcional e atualiza a lista imediatamente. |
-| F02 | Editar ou excluir vendedor | A edição atualiza o cadastro; a exclusão pede confirmação e é bloqueada enquanto existirem comissões ligadas ao vendedor, para preservar o histórico. |
+| F01 | Cadastrar vendedor | O formulário bloqueia nome vazio, aceita somente o nome e atualiza a lista imediatamente. |
+| F02 | Editar ou excluir vendedor | A edição atualiza o cadastro; a exclusão pede confirmação e é bloqueada enquanto existirem movimentações na carteira, para preservar o histórico. |
 | F03 | Registrar comissão | Exige vendedor, valor de venda e tipo/valor de comissão. Produto e observação são opcionais. A data inicia no dia atual, mas pode ser alterada. |
 | F04 | Calcular comissão percentual | Ao escolher percentual, o valor calculado é `valor da venda × percentual ÷ 100`; o valor persistido é o resultado calculado no momento do registro. |
 | F05 | Registrar comissão fixa | Ao escolher valor fixo, o valor informado é salvo como valor da comissão, sem recálculo. |
 | F06 | Consultar histórico | A tabela exibe vendedor, produto/serviço, venda, comissão e data; permite editar e excluir cada linha. |
 | F07 | Filtrar | Filtros por vendedor, data inicial e data final podem ser combinados; lista, totais e exportação refletem o resultado filtrado. |
-| F08 | Ver totais | Exibe total de comissão no filtro atual e resumo por vendedor. |
-| F09 | Persistir dados | Vendedores e comissões continuam disponíveis após recarregar a página no mesmo navegador. |
+| F08 | Ver totais | Exibe total de comissão no filtro atual, saldo disponível geral e resumo por vendedor. |
+| F09 | Persistir dados | Vendedores, comissões e retiradas continuam disponíveis após recarregar a página no mesmo navegador. |
 | F10 | Responsividade e acessibilidade básica | Funciona em telas pequenas, com rótulos, foco visível, navegação por teclado e mensagens de erro legíveis. |
+| F11 | Carteira por vendedor | Cada vendedor possui saldo próprio, calculado por comissões creditadas menos retiradas registradas para ele. A retirada exige vendedor, não pode ultrapassar o saldo e integra o histórico cronológico da carteira. |
 
 ### SHOULD — incluir nesta versão
 
@@ -81,7 +82,6 @@ localStorage key: controle-comissoes.v1
   sellers: [{
     id: string,
     name: string,
-    contact: string,
     createdAt: ISO-8601
   }],
   commissions: [{
@@ -97,6 +97,15 @@ localStorage key: controle-comissoes.v1
     note: string,
     createdAt: ISO-8601,
     updatedAt: ISO-8601
+  }],
+  withdrawals: [{
+    id: string,
+    sellerId: string,
+    sellerName: string,
+    value: number,
+    withdrawalDate: "YYYY-MM-DD",
+    note: string,
+    createdAt: ISO-8601
   }]
 }
 ```
@@ -107,11 +116,13 @@ localStorage key: controle-comissoes.v1
 
 1. **Primeiro uso:** a área de comissões orienta a cadastrar um vendedor antes de permitir salvar uma venda.
 2. **Nova comissão:** usuário escolhe vendedor, informa valor da venda e percentual ou valor fixo; o cálculo aparece antes de salvar.
-3. **Edição:** o registro existente preenche o mesmo formulário; salvar atualiza em vez de duplicar.
-4. **Filtros:** qualquer alteração atualiza tabela, cartões, gráfico e conjunto exportado.
-5. **Erros:** campos obrigatórios vazios, números inválidos, valores negativos e período invertido apresentam mensagens específicas próximas ao formulário.
-6. **Exclusões:** vendedor ou comissão pedem confirmação nativa antes da ação; a comissão excluída não é recuperável nesta versão.
-7. **Falha de armazenamento:** erro de `localStorage` informa o usuário sem afirmar que a alteração foi salva.
+3. **Carteiras:** cada comissão entra como crédito na carteira do vendedor. A carteira mostra saldo, totais e movimentações em ordem cronológica inversa.
+4. **Retirada:** usuário seleciona o vendedor, informa valor e data; o sistema bloqueia valores maiores que o saldo daquela carteira.
+5. **Edição:** o registro existente preenche o mesmo formulário; salvar atualiza em vez de duplicar, sem permitir que uma carteira fique negativa.
+6. **Filtros:** qualquer alteração atualiza tabela, cartões, gráfico e conjunto exportado.
+7. **Erros:** campos obrigatórios vazios, números inválidos, valores negativos, retirada maior que o saldo da carteira e período invertido apresentam mensagens específicas próximas ao formulário.
+8. **Exclusões:** vendedor, comissão ou retirada pedem confirmação nativa antes da ação; a comissão não pode ser excluída se a carteira correspondente ficar negativa.
+9. **Falha de armazenamento:** erro de `localStorage` informa o usuário sem afirmar que a alteração foi salva.
 
 ## 9. Riscos e mitigação
 
@@ -119,7 +130,7 @@ localStorage key: controle-comissoes.v1
 |---|---|---|
 | Limpeza de dados do navegador | perda dos dados locais | aviso no README e exportação CSV disponível |
 | Erro de digitação em valores | comissão incorreta | validação, prévia do cálculo e edição do registro |
-| Exclusão acidental | perda de histórico | confirmação e bloqueio de vendedor com registros vinculados |
+| Exclusão acidental | perda de histórico ou saldo incorreto | confirmação, bloqueio de vendedor com movimentações e proteção contra carteira negativa |
 | Dados sem vendedor por edição manual do armazenamento | histórico inconsistente | usar `sellerName` como fallback visual |
 
 ## 10. Critérios finais de aceite

@@ -44,14 +44,18 @@ function createId() {
 }
 
 function createEmptyState() {
-  return { sellers: [], commissions: [] };
+  return { sellers: [], commissions: [], withdrawals: [] };
 }
 
 function sanitizeState(raw) {
   if (!raw || !Array.isArray(raw.sellers) || !Array.isArray(raw.commissions)) {
     return createEmptyState();
   }
-  return { sellers: raw.sellers, commissions: raw.commissions };
+  return {
+    sellers: raw.sellers,
+    commissions: raw.commissions,
+    withdrawals: Array.isArray(raw.withdrawals) ? raw.withdrawals : [],
+  };
 }
 
 function loadState(storage) {
@@ -74,13 +78,17 @@ function validateSeller({ name, contact }) {
     valid: true,
     value: {
       name: String(name).trim(),
-      contact: String(contact || '').trim(),
     },
   };
 }
 
 function sellerHasCommissions(state, sellerId) {
   return state.commissions.some((commission) => commission.sellerId === sellerId);
+}
+
+function sellerHasMovements(state, sellerId) {
+  return sellerHasCommissions(state, sellerId)
+    || (state.withdrawals || []).some((withdrawal) => withdrawal.sellerId === sellerId);
 }
 
 function validateCommission(input, sellers) {
@@ -172,6 +180,91 @@ function summarizeCommissions(commissions) {
   return { total, count: commissions.length, bySeller };
 }
 
+function calculateBalance(commissions, withdrawals = []) {
+  const commissionTotal = Math.round((commissions.reduce((sum, item) => sum + (Number(item.commissionValue) || 0), 0) + Number.EPSILON) * 100) / 100;
+  const withdrawalTotal = Math.round((withdrawals.reduce((sum, item) => sum + (Number(item.value) || 0), 0) + Number.EPSILON) * 100) / 100;
+  return {
+    commissionTotal,
+    withdrawalTotal,
+    balance: Math.round((commissionTotal - withdrawalTotal + Number.EPSILON) * 100) / 100,
+  };
+}
+
+function summarizeSellerWallet(sellerId, commissions, withdrawals = []) {
+  return calculateBalance(
+    commissions.filter((commission) => commission.sellerId === sellerId),
+    withdrawals.filter((withdrawal) => withdrawal.sellerId === sellerId),
+  );
+}
+
+function hasNonNegativeWalletBalance(sellerId, commissions, withdrawals = []) {
+  return summarizeSellerWallet(sellerId, commissions, withdrawals).balance >= 0;
+}
+
+function buildWalletMovements(sellerId, commissions, withdrawals = []) {
+  const commissionMovements = commissions
+    .filter((commission) => commission.sellerId === sellerId)
+    .map((commission) => ({
+      id: commission.id,
+      type: 'commission',
+      date: commission.saleDate,
+      value: commission.commissionValue,
+      description: commission.product || 'Comissão de venda',
+      createdAt: commission.createdAt || '',
+    }));
+  const withdrawalMovements = withdrawals
+    .filter((withdrawal) => withdrawal.sellerId === sellerId)
+    .map((withdrawal) => ({
+      id: withdrawal.id,
+      type: 'withdrawal',
+      date: withdrawal.withdrawalDate,
+      value: withdrawal.value,
+      description: withdrawal.note || 'Retirada',
+      createdAt: withdrawal.createdAt || '',
+    }));
+  return [...commissionMovements, ...withdrawalMovements].sort((left, right) => (
+    String(right.date).localeCompare(String(left.date))
+    || String(right.createdAt).localeCompare(String(left.createdAt))
+  ));
+}
+
+function validateWithdrawal(input, sellers, availableBalance) {
+  const seller = sellers.find((item) => item.id === input.sellerId);
+  if (!seller) {
+    return { valid: false, error: 'Selecione o vendedor que receberá a retirada.' };
+  }
+  const value = normalizeMoney(input.value);
+  if (!(value > 0)) {
+    return { valid: false, error: 'Informe um valor de retirada maior que zero.' };
+  }
+  if (!input.withdrawalDate) {
+    return { valid: false, error: 'Informe a data da retirada.' };
+  }
+  if (value > availableBalance) {
+    return { valid: false, error: 'A retirada não pode ser maior que o saldo disponível.' };
+  }
+  return {
+    valid: true,
+    value: {
+      sellerId: seller.id,
+      sellerName: seller.name,
+      value,
+      withdrawalDate: input.withdrawalDate,
+      note: String(input.note || '').trim(),
+    },
+  };
+}
+
+function createWithdrawal(input, sellers, availableBalance, now = new Date().toISOString()) {
+  const validation = validateWithdrawal(input, sellers, availableBalance);
+  if (!validation.valid) return null;
+  return {
+    id: createId(),
+    ...validation.value,
+    createdAt: now,
+  };
+}
+
 function escapeCsv(value) {
   const text = String(value ?? '');
   return /[;"\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -203,11 +296,18 @@ const CommissionLogic = {
   saveState,
   validateSeller,
   sellerHasCommissions,
+  sellerHasMovements,
   validateCommission,
   createCommission,
   filterCommissions,
   sortCommissions,
   summarizeCommissions,
+  calculateBalance,
+  summarizeSellerWallet,
+  hasNonNegativeWalletBalance,
+  buildWalletMovements,
+  validateWithdrawal,
+  createWithdrawal,
   buildCommissionCsv,
 };
 
@@ -221,7 +321,6 @@ if (typeof document !== 'undefined') {
       message: document.querySelector('#app-message'),
       sellerForm: document.querySelector('#seller-form'),
       sellerName: document.querySelector('#seller-name'),
-      sellerContact: document.querySelector('#seller-contact'),
       sellerError: document.querySelector('#seller-error'),
       sellerSubmit: document.querySelector('#seller-submit'),
       sellerCancel: document.querySelector('#seller-cancel'),
@@ -241,13 +340,25 @@ if (typeof document !== 'undefined') {
       commissionSubmit: document.querySelector('#commission-submit'),
       commissionCancel: document.querySelector('#commission-cancel'),
       commissionEmpty: document.querySelector('#commission-empty'),
+      withdrawalForm: document.querySelector('#withdrawal-form'),
+      withdrawalSeller: document.querySelector('#withdrawal-seller'),
+      withdrawalValue: document.querySelector('#withdrawal-value'),
+      withdrawalDate: document.querySelector('#withdrawal-date'),
+      withdrawalNote: document.querySelector('#withdrawal-note'),
+      withdrawalError: document.querySelector('#withdrawal-error'),
+      withdrawalPreview: document.querySelector('#withdrawal-preview'),
+      walletList: document.querySelector('#wallet-list'),
+      walletHistoryTitle: document.querySelector('#wallet-history-title'),
+      walletMovements: document.querySelector('#wallet-movement-list'),
       filterSeller: document.querySelector('#filter-seller'),
       filterStartDate: document.querySelector('#filter-start-date'),
       filterEndDate: document.querySelector('#filter-end-date'),
       filterError: document.querySelector('#filter-error'),
       filterClear: document.querySelector('#filter-clear'),
       exportCsv: document.querySelector('#export-csv'),
+      summaryBalance: document.querySelector('#summary-balance'),
       summaryTotal: document.querySelector('#summary-total'),
+      summaryWithdrawals: document.querySelector('#summary-withdrawals'),
       summaryCount: document.querySelector('#summary-count'),
       summarySellers: document.querySelector('#summary-sellers'),
       chart: document.querySelector('#commission-chart'),
@@ -259,6 +370,7 @@ if (typeof document !== 'undefined') {
     let state = loadState(window.localStorage);
     let editingSellerId = null;
     let editingCommissionId = null;
+    let activeWalletSellerId = null;
     let sortState = { field: 'saleDate', direction: 'desc' };
 
     function showMessage(text, type = 'info') {
@@ -275,6 +387,11 @@ if (typeof document !== 'undefined') {
     function showCommissionError(text = '') {
       dom.commissionError.textContent = text;
       dom.commissionError.hidden = !text;
+    }
+
+    function showWithdrawalError(text = '') {
+      dom.withdrawalError.textContent = text;
+      dom.withdrawalError.hidden = !text;
     }
 
     function showFilterError(text = '') {
@@ -328,9 +445,7 @@ if (typeof document !== 'undefined') {
         const details = document.createElement('div');
         const name = document.createElement('strong');
         name.textContent = seller.name;
-        const contact = document.createElement('p');
-        contact.textContent = seller.contact || 'Sem contato informado';
-        details.append(name, contact);
+        details.append(name);
 
         const actions = document.createElement('div');
         actions.className = 'item-actions';
@@ -338,15 +453,14 @@ if (typeof document !== 'undefined') {
           createButton('Editar vendedor', 'button button-secondary', () => {
             editingSellerId = seller.id;
             dom.sellerName.value = seller.name;
-            dom.sellerContact.value = seller.contact || '';
             dom.sellerSubmit.textContent = 'Salvar alterações';
             dom.sellerCancel.hidden = false;
             showSellerError();
             dom.sellerName.focus();
           }),
           createButton('Excluir vendedor', 'button button-danger', () => {
-            if (sellerHasCommissions(state, seller.id)) {
-              showMessage('Não é possível excluir este vendedor porque há comissões no histórico.', 'error');
+            if (sellerHasMovements(state, seller.id)) {
+              showMessage('Não é possível excluir este vendedor porque há movimentações na carteira.', 'error');
               return;
             }
             if (!window.confirm(`Excluir o vendedor ${seller.name}?`)) return;
@@ -402,6 +516,160 @@ if (typeof document !== 'undefined') {
       showCommissionError();
       updateCommissionInputLabel();
       updateCommissionPreview();
+    }
+
+    function getActiveWalletSeller() {
+      return state.sellers.find((seller) => seller.id === activeWalletSellerId) || null;
+    }
+
+    function getAvailableBalance(sellerId = activeWalletSellerId) {
+      if (!sellerId) return 0;
+      return summarizeSellerWallet(sellerId, state.commissions, state.withdrawals).balance;
+    }
+
+    function getWithdrawalInput() {
+      return {
+        sellerId: dom.withdrawalSeller.value,
+        value: dom.withdrawalValue.value,
+        withdrawalDate: dom.withdrawalDate.value,
+        note: dom.withdrawalNote.value,
+      };
+    }
+
+    function updateWithdrawalPreview() {
+      const seller = getActiveWalletSeller();
+      if (!seller) {
+        dom.withdrawalPreview.textContent = 'Cadastre um vendedor para registrar uma retirada.';
+        return;
+      }
+      const availableBalance = getAvailableBalance(seller.id);
+      const value = normalizeMoney(dom.withdrawalValue.value);
+      if (!(value > 0)) {
+        dom.withdrawalPreview.textContent = `Saldo disponível de ${seller.name}: ${formatCurrency(availableBalance)}.`;
+        return;
+      }
+      if (value > availableBalance) {
+        dom.withdrawalPreview.textContent = `Saldo disponível de ${seller.name}: ${formatCurrency(availableBalance)}. A retirada não pode ser maior que esse valor.`;
+        return;
+      }
+      dom.withdrawalPreview.textContent = `Saldo de ${seller.name} após a retirada: ${formatCurrency(availableBalance - value)}.`;
+    }
+
+    function resetWithdrawalForm() {
+      dom.withdrawalForm.reset();
+      dom.withdrawalDate.value = todayLocal();
+      showWithdrawalError();
+      updateWithdrawalPreview();
+    }
+
+    function selectWallet(sellerId) {
+      activeWalletSellerId = state.sellers.some((seller) => seller.id === sellerId) ? sellerId : null;
+      dom.withdrawalSeller.value = activeWalletSellerId || '';
+      renderWallets();
+      renderWalletMovements();
+      updateWithdrawalPreview();
+    }
+
+    function renderWithdrawalSellerOptions() {
+      const selectedSellerId = activeWalletSellerId || dom.withdrawalSeller.value;
+      dom.withdrawalSeller.replaceChildren();
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Selecione um vendedor';
+      dom.withdrawalSeller.append(placeholder);
+      const sellers = [...state.sellers].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      for (const seller of sellers) {
+        const option = document.createElement('option');
+        option.value = seller.id;
+        option.textContent = seller.name;
+        dom.withdrawalSeller.append(option);
+      }
+      activeWalletSellerId = sellers.some((seller) => seller.id === selectedSellerId)
+        ? selectedSellerId
+        : sellers[0]?.id || null;
+      dom.withdrawalSeller.value = activeWalletSellerId || '';
+    }
+
+    function deleteWithdrawal(record) {
+      if (!window.confirm('Excluir esta retirada? O valor voltará à carteira do vendedor.')) return;
+      state.withdrawals = state.withdrawals.filter((withdrawal) => withdrawal.id !== record.id);
+      if (!persistState()) return;
+      renderAll();
+      showMessage('Retirada excluída. A carteira foi atualizada.', 'success');
+    }
+
+    function renderWallets() {
+      dom.walletList.replaceChildren();
+      const sellers = [...state.sellers].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      if (!sellers.length) {
+        const empty = document.createElement('p');
+        empty.className = 'empty-state';
+        empty.textContent = 'Nenhuma carteira disponível. Cadastre um vendedor primeiro.';
+        dom.walletList.append(empty);
+        return;
+      }
+
+      for (const seller of sellers) {
+        const wallet = summarizeSellerWallet(seller.id, state.commissions, state.withdrawals);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'wallet-card';
+        card.setAttribute('aria-pressed', String(seller.id === activeWalletSellerId));
+        const header = document.createElement('span');
+        header.className = 'wallet-card-head';
+        const name = document.createElement('strong');
+        name.textContent = seller.name;
+        const status = document.createElement('span');
+        status.textContent = seller.id === activeWalletSellerId ? 'Carteira aberta' : 'Ver carteira';
+        header.append(name, status);
+        const balance = document.createElement('span');
+        balance.className = 'wallet-card-balance';
+        balance.textContent = formatCurrency(wallet.balance);
+        const meta = document.createElement('span');
+        meta.className = 'wallet-card-meta';
+        meta.textContent = `Comissões: ${formatCurrency(wallet.commissionTotal)} · Retirado: ${formatCurrency(wallet.withdrawalTotal)}`;
+        card.append(header, balance, meta);
+        card.addEventListener('click', () => selectWallet(seller.id));
+        dom.walletList.append(card);
+      }
+    }
+
+    function renderWalletMovements() {
+      const seller = getActiveWalletSeller();
+      dom.walletMovements.replaceChildren();
+      if (!seller) {
+        dom.walletHistoryTitle.textContent = 'Movimentações da carteira';
+        const empty = document.createElement('li');
+        empty.className = 'empty-state';
+        empty.textContent = 'Selecione um vendedor para ver as movimentações.';
+        dom.walletMovements.append(empty);
+        return;
+      }
+      dom.walletHistoryTitle.textContent = `Movimentações — ${seller.name}`;
+      const movements = buildWalletMovements(seller.id, state.commissions, state.withdrawals);
+      if (!movements.length) {
+        const empty = document.createElement('li');
+        empty.className = 'empty-state';
+        empty.textContent = 'Ainda não há movimentações nesta carteira.';
+        dom.walletMovements.append(empty);
+        return;
+      }
+      for (const movement of movements) {
+        const item = document.createElement('li');
+        item.className = 'withdrawal-item';
+        const details = document.createElement('div');
+        const value = document.createElement('strong');
+        value.className = movement.type === 'commission' ? 'movement-credit' : 'movement-debit';
+        value.textContent = `${movement.type === 'commission' ? '+' : '−'} ${formatCurrency(movement.value)}`;
+        const description = document.createElement('p');
+        description.textContent = `${movement.type === 'commission' ? 'Comissão' : 'Retirada'} · ${formatDate(movement.date)} · ${movement.description}`;
+        details.append(value, description);
+        item.append(details);
+        if (movement.type === 'withdrawal') {
+          item.append(createButton('Excluir retirada', 'button button-danger', () => deleteWithdrawal({ id: movement.id })));
+        }
+        dom.walletMovements.append(item);
+      }
     }
 
     function renderCommissionSellerOptions() {
@@ -492,7 +760,12 @@ if (typeof document !== 'undefined') {
 
     function deleteCommission(record) {
       if (!window.confirm('Excluir esta comissão? Esta ação não pode ser desfeita.')) return;
-      state.commissions = state.commissions.filter((commission) => commission.id !== record.id);
+      const remainingCommissions = state.commissions.filter((commission) => commission.id !== record.id);
+      if (!hasNonNegativeWalletBalance(record.sellerId, remainingCommissions, state.withdrawals)) {
+        showMessage('Não é possível excluir esta comissão porque a carteira do vendedor ficaria negativa.', 'error');
+        return;
+      }
+      state.commissions = remainingCommissions;
       if (!persistState()) return;
       if (editingCommissionId === record.id) resetCommissionForm();
       renderAll();
@@ -548,7 +821,10 @@ if (typeof document !== 'undefined') {
 
     function renderSummary() {
       const summary = summarizeCommissions(getVisibleCommissions());
+      const balance = calculateBalance(state.commissions, state.withdrawals);
+      dom.summaryBalance.textContent = formatCurrency(balance.balance);
       dom.summaryTotal.textContent = formatCurrency(summary.total);
+      dom.summaryWithdrawals.textContent = formatCurrency(balance.withdrawalTotal);
       dom.summaryCount.textContent = String(summary.count);
       dom.summarySellers.textContent = String(summary.bySeller.length);
       renderChart(summary.bySeller);
@@ -598,15 +874,18 @@ if (typeof document !== 'undefined') {
       renderSellers();
       renderCommissionSellerOptions();
       renderFilterSellerOptions();
+      renderWithdrawalSellerOptions();
+      renderWallets();
+      renderWalletMovements();
       renderSummary();
       renderHistory();
+      updateWithdrawalPreview();
     }
 
     dom.sellerForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const validation = validateSeller({
         name: dom.sellerName.value,
-        contact: dom.sellerContact.value,
       });
 
       if (!validation.valid) {
@@ -628,6 +907,11 @@ if (typeof document !== 'undefined') {
           commission.sellerId === existing.id
             ? { ...commission, sellerName: existing.name, updatedAt: now }
             : commission
+        ));
+        state.withdrawals = state.withdrawals.map((withdrawal) => (
+          withdrawal.sellerId === existing.id
+            ? { ...withdrawal, sellerName: existing.name }
+            : withdrawal
         ));
       } else {
         state.sellers.push({ id: createId(), ...validation.value, createdAt: now });
@@ -655,6 +939,8 @@ if (typeof document !== 'undefined') {
         return;
       }
 
+      let nextCommissions;
+      let affectedSellerIds;
       if (editingCommissionId) {
         const original = state.commissions.find((commission) => commission.id === editingCommissionId);
         if (!original) {
@@ -662,14 +948,20 @@ if (typeof document !== 'undefined') {
           showMessage('A comissão que estava em edição não foi encontrada.', 'error');
           return;
         }
-        state.commissions = state.commissions.map((commission) => (
-          commission.id === editingCommissionId
-            ? { ...record, id: original.id, createdAt: original.createdAt }
-            : commission
+        const updatedRecord = { ...record, id: original.id, createdAt: original.createdAt };
+        nextCommissions = state.commissions.map((commission) => (
+          commission.id === editingCommissionId ? updatedRecord : commission
         ));
+        affectedSellerIds = [original.sellerId, updatedRecord.sellerId];
       } else {
-        state.commissions.push(record);
+        nextCommissions = [...state.commissions, record];
+        affectedSellerIds = [record.sellerId];
       }
+      if (affectedSellerIds.some((sellerId) => !hasNonNegativeWalletBalance(sellerId, nextCommissions, state.withdrawals))) {
+        showCommissionError('Essa alteração deixaria uma carteira negativa porque há retiradas já registradas.');
+        return;
+      }
+      state.commissions = nextCommissions;
 
       if (!persistState()) return;
       const action = editingCommissionId ? 'alterada' : 'salva';
@@ -677,6 +969,31 @@ if (typeof document !== 'undefined') {
       renderAll();
       showMessage(`Comissão ${action}.`, 'success');
     });
+
+    dom.withdrawalForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const input = getWithdrawalInput();
+      const availableBalance = getAvailableBalance(input.sellerId);
+      const validation = validateWithdrawal(input, state.sellers, availableBalance);
+      if (!validation.valid) {
+        showWithdrawalError(validation.error);
+        return;
+      }
+
+      const withdrawal = createWithdrawal(input, state.sellers, availableBalance);
+      if (!withdrawal) {
+        showWithdrawalError('Não foi possível registrar a retirada. Revise os campos informados.');
+        return;
+      }
+      state.withdrawals.push(withdrawal);
+      if (!persistState()) return;
+      resetWithdrawalForm();
+      renderAll();
+      showMessage(`Retirada registrada na carteira de ${withdrawal.sellerName}.`, 'success');
+    });
+
+    dom.withdrawalSeller.addEventListener('change', () => selectWallet(dom.withdrawalSeller.value));
+    dom.withdrawalValue.addEventListener('input', updateWithdrawalPreview);
 
     dom.commissionCancel.addEventListener('click', resetCommissionForm);
     dom.commissionSaleValue.addEventListener('input', updateCommissionPreview);
@@ -735,6 +1052,7 @@ if (typeof document !== 'undefined') {
 
     dom.sellerCancel.addEventListener('click', resetSellerForm);
     resetCommissionForm();
+    resetWithdrawalForm();
     renderAll();
   });
 }

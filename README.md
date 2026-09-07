@@ -18,7 +18,7 @@ Depois, acesse `http://127.0.0.1:4173/`.
 
 ## Como cadastrar vendedores
 
-Na seção **Vendedores**, informe o nome e, se quiser, telefone ou e-mail. Use **Editar vendedor** para atualizar o cadastro.
+Na seção **Vendedores**, informe somente o nome. Use **Editar vendedor** para atualizar o cadastro.
 
 Um vendedor que já tenha comissões registradas não pode ser excluído. Isso evita que o histórico fique sem identificação.
 
@@ -32,6 +32,16 @@ Um vendedor que já tenha comissões registradas não pode ser excluído. Isso e
 Produto/serviço e observação não são obrigatórios. A data começa preenchida com o dia atual, mas pode ser alterada.
 
 No histórico, use **Editar comissão** para corrigir qualquer registro. A comissão calculada é salva no momento do lançamento; mudanças futuras não alteram vendas antigas.
+
+## Carteiras e retiradas
+
+Cada vendedor possui uma carteira própria. Toda comissão registrada entra como crédito nessa carteira; o **Saldo disponível** geral é a soma dos saldos de todos os vendedores.
+
+Na seção **Carteiras dos vendedores**, selecione uma carteira para ver o saldo, o total de comissões, o total retirado e o histórico cronológico de créditos e débitos.
+
+Em **Carteira e retirada**, escolha o vendedor, informe o valor, a data e uma observação opcional. O sistema bloqueia retiradas maiores que o saldo daquela carteira. Excluir uma retirada devolve automaticamente o valor ao vendedor.
+
+Uma comissão que já tenha sido retirada não pode ser excluída nem reduzida a ponto de deixar a carteira negativa.
 
 ## Filtros, ordenação e exportação
 
