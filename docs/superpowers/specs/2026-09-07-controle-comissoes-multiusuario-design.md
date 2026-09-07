@@ -8,7 +8,7 @@
 
 Transformar o controle local de comissões em uma aplicação web hospedada na Vercel, com autenticação separada para administração e vendedores, dados persistentes no Firebase e isolamento rigoroso dos dados de cada vendedor.
 
-A versão hospedada substitui o uso contínuo de `localStorage` como fonte de verdade. Uma migração única preserva os dados existentes que ainda estiverem no navegador do administrador.
+A versão hospedada substitui o uso contínuo de `localStorage` como fonte de verdade e inicia com banco de dados vazio. Registros do sistema local não serão transferidos.
 
 ## 2. Decisões confirmadas
 
@@ -20,9 +20,7 @@ A versão hospedada substitui o uso contínuo de `localStorage` como fonte de ve
 | Backend | Funções Node.js hospedadas na Vercel |
 | Perfis | `admin` e `seller` |
 | Identificador de login | Um campo aceita e-mail ou nome de usuário |
-| Migração | Importar os dados já existentes no `localStorage` |
-| Comissões antigas | Entram como `pending` para revisão administrativa |
-| Retiradas antigas | Entram como pagamentos históricos no extrato |
+| Dados do sistema local | Não serão migrados; a base Firebase inicia vazia |
 | Exclusão de vendedor com histórico | Bloqueada; o vendedor é desativado |
 | Interface | Galaxy Smart, responsiva, em pt-BR |
 
@@ -37,7 +35,6 @@ Incluído:
 - Status `pending` e `paid`, inclusive em lote.
 - Carteira de vendedor somente leitura.
 - CSV das comissões filtradas.
-- Migração única dos dados locais existentes.
 - Bootstrap seguro do primeiro administrador.
 - Publicação preparada para Vercel + Firebase.
 
@@ -47,7 +44,7 @@ Fora de escopo:
 - Pagamentos automáticos, emissão de recibos ou cálculo de impostos.
 - Exclusão destrutiva de vendedor que possua histórico.
 - Cadastro público de contas.
-- Importação repetida de dados locais ou planilhas externas.
+- Importação de dados locais ou planilhas externas.
 - Funcionalidades de nuvem adicionais além de Firebase.
 
 ## 4. Arquitetura
@@ -65,13 +62,12 @@ Vercel Node.js API
   ├── autenticação por nome de usuário
   ├── checagem de token, papel e conta ativa
   ├── operações administrativas
-  ├── consulta segura do vendedor
-  └── migração única do localStorage
+  └── consulta segura do vendedor
           │ Firebase Admin SDK
           ▼
 Firebase
   ├── Authentication: credenciais e contas bloqueadas
-  └── Cloud Firestore: usuários, comissões, pagamentos históricos e migrações
+  └── Cloud Firestore: usuários e comissões
 ```
 
 O aplicativo será hospedado em um único domínio Vercel. O front-end não fará leituras nem escritas diretas no Firestore: dados de negócio passam pela API, que usa o Firebase Admin SDK. As regras do Firestore negarão acesso direto de clientes.
@@ -88,7 +84,7 @@ A API Node.js terá responsabilidades separadas:
 - comissões e ações em lote;
 - carteira e relatórios;
 - exportação CSV;
-- migração e bootstrap administrativo.
+- bootstrap administrativo.
 
 As funções retornam JSON consistente e o front-end converte erros conhecidos em mensagens pt-BR próximas ao contexto da ação.
 
@@ -161,44 +157,11 @@ A coleção é manipulada exclusivamente pela API. A criação e a edição de n
   paidAt: Timestamp | null,
   note: string,
   createdAt: Timestamp,
-  updatedAt: Timestamp,
-  migratedFromLocalStorage: boolean
+  updatedAt: Timestamp
 }
 ```
 
 O valor de comissão é calculado e persistido no lançamento. Alterar o percentual padrão de um vendedor não altera comissões passadas.
-
-### 5.4 `payouts/{payoutId}`
-
-```js
-{
-  sellerId: string,
-  sellerName: string,
-  value: number,
-  payoutDate: 'YYYY-MM-DD',
-  note: string,
-  createdAt: Timestamp,
-  migratedFromLocalStorage: true
-}
-```
-
-Essa coleção preserva retiradas existentes somente como histórico. Novos recebimentos são registrados pelo status `paid` de cada comissão, não pela criação de novas retiradas.
-
-### 5.5 `migrations/{migrationId}`
-
-```js
-{
-  source: 'controle-comissoes.v1',
-  status: 'completed',
-  sellerCount: number,
-  commissionCount: number,
-  payoutCount: number,
-  importedAt: Timestamp,
-  importedBy: string
-}
-```
-
-O identificador lógico `local-storage-v1` é único. A transação de migração verifica sua inexistência antes de gravar os dados; uma tentativa posterior recebe resposta de conflito sem gravar novamente.
 
 ## 6. Permissões
 
@@ -212,7 +175,6 @@ O identificador lógico `local-storage-v1` é único. A transação de migraçã
 | Exportar CSV administrativo | Sim | Não | Não |
 | Ver a própria carteira e extrato | Não aplicável | Sim | Não |
 | Trocar a própria senha | Sim | Sim | Não |
-| Migrar dados locais | Sim, uma vez | Não | Não |
 
 A API verifica essas regras para toda rota. O front-end apenas esconde ações que o perfil não deve usar; não é o controle de segurança.
 
@@ -247,21 +209,9 @@ A API verifica essas regras para toda rota. O front-end apenas esconde ações q
 
 - **A receber:** soma das comissões `pending` do vendedor filtradas pelo período quando aplicável.
 - **Já recebido:** soma das comissões `paid` do vendedor.
-- **Extrato:** comissão, venda, produto, data e status; pagamentos históricos importados aparecem separados e identificados.
+- **Extrato:** comissão, venda, produto, data e status.
 - O gráfico mensal exibe comissões pagas por mês.
 - Toda consulta é limitada ao `uid` da sessão autenticada no servidor.
-
-### 7.5 Migração única
-
-1. Admin entra pelo navegador que contém `controle-comissoes.v1`.
-2. A tela administrativa detecta os dados e mostra contagens antes de enviar.
-3. Admin confirma a importação.
-4. Antes de gravar, a tela exige e-mail, nome de usuário e senha inicial para cada vendedor legado. A API valida estrutura, vendedores, valores, referências e essas novas credenciais antes de criar as contas Firebase e os perfis correspondentes.
-5. As comissões antigas entram como `pending`; retiradas entram em `payouts` como histórico.
-6. O registro `migrations/local-storage-v1` é criado de forma transacional.
-7. A tela mostra as contagens importadas e impede nova importação.
-
-A etapa de atribuir e-mail, nome de usuário e senha inicial a cada vendedor legado é explícita durante a migração; não existem credenciais no `localStorage` atual e elas não serão inventadas.
 
 ## 8. Telas
 
@@ -274,11 +224,11 @@ A etapa de atribuir e-mail, nome de usuário e senha inicial a cada vendedor leg
 
 ### Administração
 
-- Navegação lateral compacta: Resumo, Vendedores, Comissões e Migração.
+- Navegação lateral compacta: Resumo, Vendedores e Comissões.
 - Cartões de pendente, pago e resumo por vendedor.
 - Formulários com rótulos, foco visível e confirmação em ações irreversíveis.
 - Tabela de comissões com filtros, seleção em lote, edição, exclusão e CSV.
-- Detalhe de vendedor com comissões, totais e pagamentos históricos.
+- Detalhe de vendedor com comissões e totais.
 
 ### Minha carteira
 
@@ -306,7 +256,7 @@ Em celular, as telas usam coluna única e controles que não geram rolagem horiz
 - Token ausente ou inválido retorna `401`.
 - Papel insuficiente ou conta inativa retorna `403`.
 - Recurso inexistente retorna `404`.
-- Nome de usuário, e-mail, migração repetida e conflito de edição retornam `409`.
+- Nome de usuário, e-mail e conflito de edição retornam `409`.
 - Falha inesperada retorna `500` sem stack trace, segredo ou detalhe interno ao navegador.
 - Login sempre apresenta uma mensagem genérica, independentemente de identificador inválido, senha inválida ou conta bloqueada.
 
@@ -323,15 +273,14 @@ Em celular, as telas usam coluna única e controles que não geram rolagem horiz
 
 ### Automação
 
-1. Unitários para cálculo, filtros, normalização de identificador, validações, status e dados de migração.
+1. Unitários para cálculo, filtros, normalização de identificador, validações e status.
 2. Integração com Firebase Emulator para:
    - admin autorizado;
    - vendedor limitado à própria carteira;
    - vendedor desativado bloqueado;
    - nome de usuário único;
    - criação e redefinição de senha;
-   - comissão individual/em lote;
-   - migração atômica e não repetível.
+   - comissão individual/em lote.
 3. Testes de rota para `401`, `403`, `404`, `409` e validações.
 4. Teste de build local preparado para Vercel e auditoria para confirmar que segredos não foram rastreados.
 
@@ -356,7 +305,6 @@ Valores públicos de configuração Web do Firebase podem ser disponibilizados a
 - Senhas nunca são salvas em texto no app, Firestore ou Git.
 - Admin administra vendedores e comissões; vendedor não altera dados financeiros.
 - Status pago/pendente controla os valores da carteira e os totais administrativos.
-- Dados do `localStorage` são migrados uma vez, com contagens verificáveis e sem duplicação.
-- Retiradas antigas aparecem no histórico e comissões antigas ficam pendentes até revisão.
+- A base Firebase inicia vazia, sem importar os dados do sistema local.
 - Desativação bloqueia acesso e preserva histórico.
 - Testes automatizados, browser real e preview publicado são verificados antes da entrega.
