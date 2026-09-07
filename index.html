@@ -22,6 +22,68 @@
     <main id="conteudo" class="container page-content" tabindex="-1">
       <p id="app-message" class="app-message" role="status" aria-live="polite" hidden></p>
 
+      <section id="resumo" class="panel" aria-labelledby="resumo-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Visão do período</p>
+            <h2 id="resumo-title">Resumo de comissões</h2>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card"><p>Total de comissões</p><strong id="summary-total">R$ 0,00</strong></article>
+          <article class="summary-card"><p>Registros no período</p><strong id="summary-count">0</strong></article>
+          <article class="summary-card"><p>Vendedores com comissão</p><strong id="summary-sellers">0</strong></article>
+        </div>
+        <div class="chart-section">
+          <h3>Comissão por vendedor</h3>
+          <ul id="commission-chart" class="commission-chart" aria-live="polite"></ul>
+        </div>
+      </section>
+
+      <section id="historico" class="panel" aria-labelledby="historico-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Consulta e gestão</p>
+            <h2 id="historico-title">Histórico de comissões</h2>
+          </div>
+        </div>
+        <div class="filter-grid" aria-label="Filtros do histórico">
+          <div class="field">
+            <label for="filter-seller">Vendedor</label>
+            <select id="filter-seller"></select>
+          </div>
+          <div class="field">
+            <label for="filter-start-date">Data inicial</label>
+            <input id="filter-start-date" type="date">
+          </div>
+          <div class="field">
+            <label for="filter-end-date">Data final</label>
+            <input id="filter-end-date" type="date">
+          </div>
+        </div>
+        <p id="filter-error" class="error-message" role="alert" hidden></p>
+        <div class="form-actions">
+          <button id="filter-clear" class="button button-secondary" type="button">Limpar filtros</button>
+          <button id="export-csv" class="button button-secondary" type="button">Exportar CSV</button>
+        </div>
+        <p id="history-status" class="table-status" aria-live="polite"></p>
+        <div class="table-scroll" tabindex="0">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col"><button class="sort-button" type="button" data-sort="sellerName">Vendedor</button></th>
+                <th scope="col">Produto ou serviço</th>
+                <th scope="col"><button class="sort-button" type="button" data-sort="saleValue">Valor da venda</button></th>
+                <th scope="col"><button class="sort-button" type="button" data-sort="commissionValue">Valor da comissão</button></th>
+                <th scope="col"><button class="sort-button" type="button" data-sort="saleDate">Data</button></th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="commission-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="comissoes" class="panel" aria-labelledby="comissoes-title">
         <div class="section-heading">
           <div>

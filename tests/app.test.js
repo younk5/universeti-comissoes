@@ -67,3 +67,33 @@ test('cria comissão percentual com valor congelado e nome histórico', () => {
   assert.equal(commission.saleValue, 2000);
   assert.equal(commission.createdAt, '2026-09-07T12:00:00.000Z');
 });
+
+const { filterCommissions, sortCommissions, summarizeCommissions } = require('../app.js');
+const history = [
+  { id: 'c1', sellerId: 'v1', sellerName: 'Ana', saleDate: '2026-09-01', saleValue: 100, commissionValue: 10 },
+  { id: 'c2', sellerId: 'v2', sellerName: 'Bruno', saleDate: '2026-09-05', saleValue: 300, commissionValue: 45 },
+  { id: 'c3', sellerId: 'v1', sellerName: 'Ana', saleDate: '2026-09-10', saleValue: 200, commissionValue: 20 },
+];
+
+test('combina filtro de vendedor e período inclusivo', () => {
+  assert.deepEqual(filterCommissions(history, {
+    sellerId: 'v1', startDate: '2026-09-02', endDate: '2026-09-10',
+  }).map((item) => item.id), ['c3']);
+});
+
+test('ordena cópia por comissão sem alterar a lista original', () => {
+  const sorted = sortCommissions(history, 'commissionValue', 'desc');
+  assert.deepEqual(sorted.map((item) => item.id), ['c2', 'c3', 'c1']);
+  assert.equal(history[0].id, 'c1');
+});
+
+test('calcula total e subtotal por vendedor', () => {
+  assert.deepEqual(summarizeCommissions(history), {
+    total: 75,
+    count: 3,
+    bySeller: [
+      { sellerId: 'v2', sellerName: 'Bruno', total: 45 },
+      { sellerId: 'v1', sellerName: 'Ana', total: 30 },
+    ],
+  });
+});
