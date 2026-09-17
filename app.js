@@ -51,12 +51,6 @@ function formatCurrency(value) {
   return currencyFormatter.format(Number(value) || 0);
 }
 
-const numberFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
-
-function formatNumber(value) {
-  return numberFormatter.format(Number(value) || 0);
-}
-
 function createId() {
   return globalThis.crypto?.randomUUID?.()
     || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
@@ -911,18 +905,11 @@ if (typeof document !== 'undefined') {
 
       for (const record of commissions) {
         const row = document.createElement('tr');
-        const commissionCell = createCell(formatCurrency(record.commissionValue));
-        if (record.commissionType === 'percentage') {
-          const detail = document.createElement('span');
-          detail.className = 'cell-detail';
-          detail.textContent = `${formatNumber(record.commissionInput)}% da venda`;
-          commissionCell.append(' ', detail);
-        }
         row.append(
           createCell(record.sellerName || 'Vendedor não encontrado'),
           createCell(record.product || '—'),
           createCell(formatCurrency(record.saleValue)),
-          commissionCell,
+          createCell(formatCurrency(record.commissionValue)),
           createCell(formatDate(record.saleDate)),
         );
 
