@@ -3,20 +3,26 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Painel interno da Galaxy Smart para controlar vendedores e comissões.">
-    <title>Galaxy Smart | Controle de Comissões</title>
+    <meta name="description" content="Painel interno da Universe TI para controlar vendedores e comissões.">
+    <meta name="theme-color" content="#0b0b18">
+    <title>Universe TI | Controle de Comissões</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
+    <noscript>
+      <p class="app-message error" role="alert">Este painel precisa de JavaScript ativado para funcionar.</p>
+    </noscript>
+
     <header class="site-header">
       <div class="container brand-lockup">
-        <img class="brand-logo" src="assets/galaxy-smart.png" alt="Galaxy Smart — Mais que acessórios, uma experiência.">
+        <img class="brand-logo" src="assets/galaxy-smart.png" alt="Universe TI — Mais que acessórios, uma experiência.">
         <div class="brand-copy">
           <h1>Controle de Comissões</h1>
-          <p class="header-description">Gerencie seus vendedores e defina as comissões da Galaxy Smart.</p>
+          <p class="header-description">Gerencie seus vendedores e defina as comissões.</p>
         </div>
       </div>
     </header>
@@ -87,7 +93,7 @@
               <textarea id="commission-note" name="note" rows="3"></textarea>
             </div>
             <p id="commission-error" class="error-message" role="alert" hidden></p>
-            <output id="commission-preview" class="commission-preview">Informe os valores para calcular a comissão.</output>
+            <output id="commission-preview" class="commission-preview" aria-live="polite">Informe os valores para calcular a comissão.</output>
             <div class="form-actions">
               <button id="commission-submit" class="button" type="submit">Salvar comissão</button>
               <button id="commission-cancel" class="button button-secondary" type="button" hidden>Cancelar edição</button>
@@ -161,7 +167,7 @@
               <textarea id="withdrawal-note" name="note" rows="2"></textarea>
             </div>
             <p id="withdrawal-error" class="error-message" role="alert" hidden></p>
-            <output id="withdrawal-preview" class="commission-preview withdrawal-preview">Saldo disponível: R$ 0,00.</output>
+            <output id="withdrawal-preview" class="commission-preview withdrawal-preview" aria-live="polite">Saldo disponível: R$ 0,00.</output>
             <div class="form-actions">
               <button id="withdrawal-submit" class="button" type="submit">Registrar retirada</button>
             </div>
@@ -218,6 +224,13 @@
           </table>
         </div>
       </section>
+
+      <footer class="site-footer">
+        <p>
+          Os dados ficam salvos apenas neste navegador e neste dispositivo — não sincronizam entre
+          computadores ou celulares. Exporte o CSV com regularidade para manter um backup.
+        </p>
+      </footer>
     </main>
   </body>
 </html>

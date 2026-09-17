@@ -6,12 +6,25 @@ function normalizeMoney(value) {
   const text = String(value ?? '').trim().replace(/R\$|\s/g, '');
   if (!text) return Number.NaN;
 
-  const normalized = text.includes(',')
-    ? text.replace(/\./g, '').replace(',', '.')
-    : text;
-  const parsed = Number(normalized);
+  let normalized;
+  if (text.includes(',')) {
+    // Formato brasileiro completo: "1.234,56"
+    normalized = text.replace(/\./g, '').replace(',', '.');
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
+    // Só pontos, em grupos de três: "1.500" e "1.234.567" são milhares
+    normalized = text.replace(/\./g, '');
+  } else {
+    // Decimal com ponto (padrão internacional): "1234.56"
+    normalized = text;
+  }
 
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function toSafeNumber(value, fallback = 0) {
+  const parsed = typeof value === 'string' ? normalizeMoney(value) : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function calculateCommission(saleValue, type, input) {
@@ -38,6 +51,12 @@ function formatCurrency(value) {
   return currencyFormatter.format(Number(value) || 0);
 }
 
+const numberFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 });
+
+function formatNumber(value) {
+  return numberFormatter.format(Number(value) || 0);
+}
+
 function createId() {
   return globalThis.crypto?.randomUUID?.()
     || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
@@ -48,14 +67,52 @@ function createEmptyState() {
 }
 
 function sanitizeState(raw) {
-  if (!raw || !Array.isArray(raw.sellers) || !Array.isArray(raw.commissions)) {
-    return createEmptyState();
-  }
-  return {
-    sellers: raw.sellers,
-    commissions: raw.commissions,
-    withdrawals: Array.isArray(raw.withdrawals) ? raw.withdrawals : [],
-  };
+  if (!raw || typeof raw !== 'object') return createEmptyState();
+
+  const sellers = Array.isArray(raw.sellers)
+    ? raw.sellers
+        .filter((seller) => seller && typeof seller === 'object' && seller.id && String(seller.name ?? '').trim())
+        .map((seller) => ({
+          id: String(seller.id),
+          name: String(seller.name).trim(),
+          createdAt: seller.createdAt || '',
+        }))
+    : [];
+
+  const commissions = Array.isArray(raw.commissions)
+    ? raw.commissions
+        .filter((item) => item && typeof item === 'object' && item.id && item.sellerId)
+        .map((item) => ({
+          id: String(item.id),
+          sellerId: String(item.sellerId),
+          sellerName: String(item.sellerName ?? ''),
+          product: String(item.product ?? ''),
+          saleValue: toSafeNumber(item.saleValue),
+          commissionType: item.commissionType === 'fixed' ? 'fixed' : 'percentage',
+          commissionInput: toSafeNumber(item.commissionInput),
+          commissionValue: toSafeNumber(item.commissionValue),
+          saleDate: typeof item.saleDate === 'string' ? item.saleDate : '',
+          note: String(item.note ?? ''),
+          createdAt: item.createdAt || '',
+          updatedAt: item.updatedAt || item.createdAt || '',
+        }))
+    : [];
+
+  const withdrawals = Array.isArray(raw.withdrawals)
+    ? raw.withdrawals
+        .filter((item) => item && typeof item === 'object' && item.id && item.sellerId)
+        .map((item) => ({
+          id: String(item.id),
+          sellerId: String(item.sellerId),
+          sellerName: String(item.sellerName ?? ''),
+          value: toSafeNumber(item.value),
+          withdrawalDate: typeof item.withdrawalDate === 'string' ? item.withdrawalDate : '',
+          note: String(item.note ?? ''),
+          createdAt: item.createdAt || '',
+        }))
+    : [];
+
+  return { sellers, commissions, withdrawals };
 }
 
 function loadState(storage) {
@@ -152,6 +209,14 @@ function filterCommissions(commissions, { sellerId = '', startDate = '', endDate
     (!sellerId || item.sellerId === sellerId)
     && (!startDate || item.saleDate >= startDate)
     && (!endDate || item.saleDate <= endDate)
+  ));
+}
+
+function filterWithdrawals(withdrawals, { sellerId = '', startDate = '', endDate = '' } = {}) {
+  return (withdrawals || []).filter((item) => (
+    (!sellerId || item.sellerId === sellerId)
+    && (!startDate || item.withdrawalDate >= startDate)
+    && (!endDate || item.withdrawalDate <= endDate)
   ));
 }
 
@@ -310,6 +375,7 @@ const CommissionLogic = {
   validateCommission,
   createCommission,
   filterCommissions,
+  filterWithdrawals,
   sortCommissions,
   summarizeCommissions,
   calculateBalance,
@@ -409,6 +475,31 @@ if (typeof document !== 'undefined') {
       dom.filterError.hidden = !text;
     }
 
+    const CAMPOS_DE_ENTRADA = () => [
+      dom.sellerName,
+      dom.commissionSeller,
+      dom.commissionSaleValue,
+      dom.commissionType,
+      dom.commissionInput,
+      dom.commissionDate,
+      dom.withdrawalSeller,
+      dom.withdrawalValue,
+      dom.withdrawalDate,
+    ];
+
+    function limparInvalidos() {
+      for (const campo of CAMPOS_DE_ENTRADA()) campo.removeAttribute('aria-invalid');
+    }
+
+    /** Marca o campo inválido e leva o foco até ele. */
+    function focarErro(mensagem, mapa, padrao) {
+      limparInvalidos();
+      const alvo = mapa.find(([padrao]) => padrao.test(mensagem))?.[1] ?? padrao;
+      if (!alvo) return;
+      alvo.setAttribute('aria-invalid', 'true');
+      alvo.focus?.();
+    }
+
     function persistState() {
       try {
         saveState(window.localStorage, state);
@@ -425,6 +516,7 @@ if (typeof document !== 'undefined') {
       dom.sellerSubmit.textContent = 'Cadastrar vendedor';
       dom.sellerCancel.hidden = true;
       showSellerError();
+      limparInvalidos();
     }
 
     function createButton(text, className, onClick) {
@@ -533,6 +625,7 @@ if (typeof document !== 'undefined') {
       dom.commissionSubmit.textContent = 'Salvar comissão';
       dom.commissionCancel.hidden = true;
       showCommissionError();
+      limparInvalidos();
       updateCommissionInputLabel();
       updateCommissionPreview();
     }
@@ -578,6 +671,7 @@ if (typeof document !== 'undefined') {
       dom.withdrawalForm.reset();
       dom.withdrawalDate.value = todayLocal();
       showWithdrawalError();
+      limparInvalidos();
       updateWithdrawalPreview();
     }
 
@@ -817,11 +911,18 @@ if (typeof document !== 'undefined') {
 
       for (const record of commissions) {
         const row = document.createElement('tr');
+        const commissionCell = createCell(formatCurrency(record.commissionValue));
+        if (record.commissionType === 'percentage') {
+          const detail = document.createElement('span');
+          detail.className = 'cell-detail';
+          detail.textContent = `${formatNumber(record.commissionInput)}% da venda`;
+          commissionCell.append(' ', detail);
+        }
         row.append(
           createCell(record.sellerName || 'Vendedor não encontrado'),
           createCell(record.product || '—'),
           createCell(formatCurrency(record.saleValue)),
-          createCell(formatCurrency(record.commissionValue)),
+          commissionCell,
           createCell(formatDate(record.saleDate)),
         );
 
@@ -839,11 +940,19 @@ if (typeof document !== 'undefined') {
     }
 
     function renderSummary() {
-      const summary = summarizeCommissions(getVisibleCommissions());
-      const balance = calculateBalance(state.commissions, state.withdrawals);
+      const filters = getCurrentFilters();
+      const commissions = filterCommissions(state.commissions, filters);
+      const withdrawals = filterWithdrawals(state.withdrawals, filters);
+      const summary = summarizeCommissions(commissions);
+      const withdrawalsTotal = Math.round((withdrawals.reduce((sum, item) => sum + item.value, 0) + Number.EPSILON) * 100) / 100;
+      // O saldo é acumulado: respeita o vendedor escolhido, mas não o período.
+      const balance = calculateBalance(
+        filterCommissions(state.commissions, { sellerId: filters.sellerId }),
+        filterWithdrawals(state.withdrawals, { sellerId: filters.sellerId }),
+      );
       dom.summaryBalance.textContent = formatCurrency(balance.balance);
       dom.summaryTotal.textContent = formatCurrency(summary.total);
-      dom.summaryWithdrawals.textContent = formatCurrency(balance.withdrawalTotal);
+      dom.summaryWithdrawals.textContent = formatCurrency(withdrawalsTotal);
       dom.summaryCount.textContent = String(summary.count);
       dom.summarySellers.textContent = String(summary.bySeller.length);
       renderChart(summary.bySeller);
@@ -909,7 +1018,7 @@ if (typeof document !== 'undefined') {
 
       if (!validation.valid) {
         showSellerError(validation.error);
-        dom.sellerName.focus();
+        focarErro(validation.error, [[/nome/i, dom.sellerName]], dom.sellerName);
         return;
       }
 
@@ -949,6 +1058,13 @@ if (typeof document !== 'undefined') {
       const validation = validateCommission(input, state.sellers);
       if (!validation.valid) {
         showCommissionError(validation.error);
+        focarErro(validation.error, [
+          [/vendedor/i, dom.commissionSeller],
+          [/valor de venda/i, dom.commissionSaleValue],
+          [/tipo de comissão/i, dom.commissionType],
+          [/comissão/i, dom.commissionInput],
+          [/data/i, dom.commissionDate],
+        ], dom.commissionSaleValue);
         return;
       }
 
@@ -996,6 +1112,11 @@ if (typeof document !== 'undefined') {
       const validation = validateWithdrawal(input, state.sellers, availableBalance);
       if (!validation.valid) {
         showWithdrawalError(validation.error);
+        focarErro(validation.error, [
+          [/vendedor/i, dom.withdrawalSeller],
+          [/valor/i, dom.withdrawalValue],
+          [/data/i, dom.withdrawalDate],
+        ], dom.withdrawalValue);
         return;
       }
 

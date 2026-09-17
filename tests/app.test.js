@@ -215,3 +215,44 @@ test('gera CSV com BOM, ponto e vírgula e campos escapados', () => {
   assert.match(csv, /"Plano; Premium"/);
   assert.match(csv, /"Disse ""ok"""/);
 });
+
+test('interpreta pontos como separador de milhar quando não há vírgula', () => {
+  assert.equal(normalizeMoney('1.500'), 1500);
+  assert.equal(normalizeMoney('1.234.567'), 1234567);
+  assert.equal(normalizeMoney('1500'), 1500);
+  assert.equal(normalizeMoney('1234.56'), 1234.56);
+});
+
+const { filterWithdrawals } = require('../app.js');
+
+test('filtra retiradas por vendedor e período inclusivo', () => {
+  const withdrawals = [
+    { id: 'r1', sellerId: 'v1', withdrawalDate: '2026-09-01' },
+    { id: 'r2', sellerId: 'v2', withdrawalDate: '2026-09-05' },
+    { id: 'r3', sellerId: 'v1', withdrawalDate: '2026-09-10' },
+  ];
+  assert.deepEqual(
+    filterWithdrawals(withdrawals, { sellerId: 'v1', startDate: '2026-09-02', endDate: '2026-09-10' }).map((item) => item.id),
+    ['r3'],
+  );
+  assert.deepEqual(filterWithdrawals(undefined, {}), []);
+});
+
+test('descarta registros corrompidos ao abrir os dados salvos', () => {
+  const state = sanitizeState({
+    sellers: [{ id: 'v1', name: 'Ana' }, { id: '', name: 'Sem id' }, null],
+    commissions: [
+      { id: 'c1', sellerId: 'v1', saleValue: '1.500', commissionValue: '150', commissionInput: '10' },
+      { id: 'c2' },
+      'lixo',
+    ],
+    withdrawals: [{ id: 'r1', sellerId: 'v1', value: '100' }, { id: 'r2' }],
+  });
+
+  assert.equal(state.sellers.length, 1);
+  assert.equal(state.commissions.length, 1);
+  assert.equal(state.commissions[0].saleValue, 1500);
+  assert.equal(state.commissions[0].commissionValue, 150);
+  assert.equal(state.withdrawals.length, 1);
+  assert.equal(state.withdrawals[0].value, 100);
+});

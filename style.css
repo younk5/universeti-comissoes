@@ -210,3 +210,10 @@ tbody tr:last-child td { border-bottom: 0; }
     transition-duration: .01ms !important;
   }
 }
+
+/* ===== DETALHES E RODAPÉ ===== */
+.cell-detail { display: block; margin-top: 2px; color: var(--muted); font-size: .78rem; font-weight: 400; }
+.site-footer { margin-top: var(--space-1); padding-top: var(--space-2); border-top: 1px solid var(--border); color: var(--muted); font-size: .86rem; }
+.site-footer p { max-width: 72ch; margin: 0; }
+[aria-invalid="true"] { border-color: #ff8f8f; }
+

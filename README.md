@@ -1,6 +1,6 @@
-# Galaxy Smart — Controle de Comissões
+# Universe TI — Controle de Comissões
 
-Painel interno da Galaxy Smart para controlar vendedores, registrar vendas e definir as comissões a pagar.
+Painel interno da Universe TI para controlar vendedores, registrar vendas e definir as comissões a pagar.
 
 ## Como abrir
 
@@ -20,7 +20,7 @@ Depois, acesse `http://127.0.0.1:4173/`.
 
 Na seção **Vendedores**, informe somente o nome. Use **Editar vendedor** para atualizar o cadastro.
 
-Um vendedor que já tenha comissões registradas não pode ser excluído. Isso evita que o histórico fique sem identificação.
+Ao excluir um vendedor que já tenha comissões ou retiradas, o app avisa quantos registros serão apagados junto e só remove tudo depois da confirmação. Assim, excluir um vendedor limpa a carteira dele por completo — exporte o CSV antes se quiser guardar o histórico.
 
 ## Como registrar e editar comissões
 
@@ -28,6 +28,8 @@ Um vendedor que já tenha comissões registradas não pode ser excluído. Isso e
 2. Em **Registrar comissão**, escolha o vendedor, informe o valor da venda e selecione o tipo de comissão.
 3. Para percentual, informe por exemplo `10` para 10%. Para valor fixo, informe por exemplo `150,00`.
 4. Confira a prévia do valor calculado antes de salvar.
+
+Valores aceitam o formato brasileiro: `1.500`, `1.500,00`, `1234,56` e também `1234.56`.
 
 Produto/serviço e observação não são obrigatórios. A data começa preenchida com o dia atual, mas pode ser alterada.
 
@@ -49,7 +51,7 @@ Ao excluir um vendedor, o app informa quantas comissões e retiradas serão remo
 
 - Filtre por vendedor e/ou por data inicial e final.
 - Clique nos títulos de vendedor, valor de venda, comissão ou data para alterar a ordenação.
-- Os cartões de resumo, o gráfico e a exportação consideram exatamente os filtros ativos.
+- Os cartões de totais, o gráfico e a exportação consideram exatamente os filtros ativos. O cartão **Saldo disponível** mostra o saldo acumulado da carteira e acompanha apenas o vendedor selecionado (não o período).
 - Clique em **Exportar CSV** para baixar os registros visíveis. O arquivo abre em Excel, LibreOffice Calc e outros programas de planilha.
 
 ## Onde os dados ficam
@@ -70,3 +72,11 @@ location.reload();
 ```
 
 Essa ação é permanente nesta versão. Exporte um CSV antes de executar se quiser preservar o histórico.
+
+## Testes
+
+As funções de cálculo, validação e formatação são testadas com o test runner do Node:
+
+```bash
+node --test tests/app.test.js
+```
