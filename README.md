@@ -54,31 +54,13 @@ Ao excluir um vendedor, o app informa quantas comissões e retiradas serão remo
 - Os cartões de totais, o gráfico e a exportação consideram exatamente os filtros ativos. O cartão **Saldo disponível** mostra o saldo acumulado da carteira e acompanha apenas o vendedor selecionado (não o período).
 - Clique em **Exportar CSV** para baixar os registros visíveis. O arquivo abre em Excel, LibreOffice Calc e outros programas de planilha.
 
-## Fechamento do período
-
-Na seção **Fechamento do período**, escolha a data inicial e a final para ver, por vendedor:
-quanto de comissão entrou, quanto foi retirado e o saldo do período. Use **Exportar fechamento
-(CSV)** para baixar essa visão — é o relatório pronto para conferência e pagamento.
-
-## Backup e restauração (JSON)
-
-Na seção **Backup dos dados**:
-
-- **Exportar backup (.json)** baixa um arquivo com todos os vendedores, comissões e retiradas.
-  Diferente do CSV, esse arquivo pode ser lido de volta pelo próprio painel.
-- **Importar backup** restaura um arquivo exportado. A importação **substitui** os dados atuais,
-  então o app pede confirmação antes.
-
-Use o backup em JSON para trocar de aparelho ou navegador sem perder o histórico.
-
 ## Onde os dados ficam
 
 Os dados ficam somente no armazenamento local deste navegador e deste dispositivo. Eles continuam disponíveis após atualizar a página, mas não sincronizam com outro computador, outro celular ou outro navegador.
 
 ## Como fazer backup
 
-Exporte o **backup em JSON** (recomendado, permite restaurar) e, se quiser, o **CSV** com os filtros
-desejados. Guarde os arquivos em um local seguro.
+Use **Exportar CSV** com os filtros desejados regularmente. Guarde o arquivo baixado em um local seguro. O CSV é a cópia de segurança desta versão, pois não há servidor ou nuvem.
 
 ## Como apagar todos os dados
 

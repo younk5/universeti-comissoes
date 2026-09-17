@@ -357,114 +357,6 @@ function buildCommissionCsv(commissions) {
   return `\uFEFF${[header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\r\n')}`;
 }
 
-const round2 = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
-
-/** Fechamento do período: comissões, retiradas e saldo por vendedor. */
-function buildClosing(commissions, withdrawals, { startDate = '', endDate = '' } = {}) {
-  const periodo = { startDate, endDate };
-  const linhas = new Map();
-  const obter = (item) => {
-    if (!linhas.has(item.sellerId)) {
-      linhas.set(item.sellerId, {
-        sellerId: item.sellerId,
-        sellerName: item.sellerName || 'Vendedor não encontrado',
-        commissionTotal: 0,
-        commissionCount: 0,
-        withdrawalTotal: 0,
-        withdrawalCount: 0,
-      });
-    }
-    const linha = linhas.get(item.sellerId);
-    if (item.sellerName) linha.sellerName = item.sellerName;
-    return linha;
-  };
-
-  for (const item of filterCommissions(commissions, periodo)) {
-    const linha = obter(item);
-    linha.commissionTotal += item.commissionValue;
-    linha.commissionCount += 1;
-  }
-  for (const item of filterWithdrawals(withdrawals, periodo)) {
-    const linha = obter(item);
-    linha.withdrawalTotal += item.value;
-    linha.withdrawalCount += 1;
-  }
-
-  const rows = [...linhas.values()]
-    .map((linha) => ({
-      ...linha,
-      commissionTotal: round2(linha.commissionTotal),
-      withdrawalTotal: round2(linha.withdrawalTotal),
-      balance: round2(linha.commissionTotal - linha.withdrawalTotal),
-    }))
-    .sort((a, b) => b.commissionTotal - a.commissionTotal || a.sellerName.localeCompare(b.sellerName, 'pt-BR'));
-
-  const totals = rows.reduce(
-    (acc, linha) => ({
-      commissionTotal: round2(acc.commissionTotal + linha.commissionTotal),
-      withdrawalTotal: round2(acc.withdrawalTotal + linha.withdrawalTotal),
-      balance: round2(acc.balance + linha.balance),
-      commissionCount: acc.commissionCount + linha.commissionCount,
-      withdrawalCount: acc.withdrawalCount + linha.withdrawalCount,
-    }),
-    { commissionTotal: 0, withdrawalTotal: 0, balance: 0, commissionCount: 0, withdrawalCount: 0 },
-  );
-
-  return { rows, totals };
-}
-
-function buildClosingCsv(closing, { startDate = '', endDate = '' } = {}) {
-  const header = ['Vendedor', 'Comissões no período', 'Qtd. comissões', 'Retiradas no período', 'Qtd. retiradas', 'Saldo do período'];
-  const rows = closing.rows.map((linha) => [
-    linha.sellerName,
-    formatCurrency(linha.commissionTotal),
-    linha.commissionCount,
-    formatCurrency(linha.withdrawalTotal),
-    linha.withdrawalCount,
-    formatCurrency(linha.balance),
-  ]);
-  rows.push([
-    'TOTAL',
-    formatCurrency(closing.totals.commissionTotal),
-    closing.totals.commissionCount,
-    formatCurrency(closing.totals.withdrawalTotal),
-    closing.totals.withdrawalCount,
-    formatCurrency(closing.totals.balance),
-  ]);
-  const periodo = startDate || endDate ? `Período;${startDate || 'início'};${endDate || 'hoje'}` : 'Período;todos';
-  return `\uFEFF${periodo}\r\n${[header, ...rows].map((row) => row.map(escapeCsv).join(';')).join('\r\n')}`;
-}
-
-/** Backup completo em JSON (diferente do CSV: pode ser importado de volta). */
-function buildBackup(state, now = new Date().toISOString()) {
-  return {
-    app: 'controle-comissoes',
-    version: 1,
-    exportedAt: now,
-    sellers: state.sellers,
-    commissions: state.commissions,
-    withdrawals: state.withdrawals || [],
-  };
-}
-
-/** Lê um backup exportado; devolve o estado saneado ou null se o arquivo for inválido. */
-function parseBackup(text) {
-  let raw;
-  try {
-    raw = JSON.parse(String(text ?? ''));
-  } catch {
-    return null;
-  }
-  if (!raw || typeof raw !== 'object') return null;
-  const pareceBackup = raw.app === 'controle-comissoes'
-    || Array.isArray(raw.sellers)
-    || Array.isArray(raw.commissions)
-    || Array.isArray(raw.withdrawals);
-  if (!pareceBackup) return null;
-  return sanitizeState(raw);
-}
-
-
 const CommissionLogic = {
   STORAGE_KEY,
   normalizeMoney,
@@ -493,10 +385,6 @@ const CommissionLogic = {
   validateWithdrawal,
   createWithdrawal,
   buildCommissionCsv,
-  buildClosing,
-  buildClosingCsv,
-  buildBackup,
-  parseBackup,
 };
 
 if (typeof window !== 'undefined') window.CommissionLogic = CommissionLogic;
@@ -544,14 +432,6 @@ if (typeof document !== 'undefined') {
       filterError: document.querySelector('#filter-error'),
       filterClear: document.querySelector('#filter-clear'),
       exportCsv: document.querySelector('#export-csv'),
-      exportJson: document.querySelector('#export-json'),
-      importJson: document.querySelector('#import-json'),
-      importFile: document.querySelector('#import-file'),
-      closingStart: document.querySelector('#closing-start'),
-      closingEnd: document.querySelector('#closing-end'),
-      closingBody: document.querySelector('#closing-body'),
-      closingStatus: document.querySelector('#closing-status'),
-      closingExport: document.querySelector('#closing-export'),
       summaryBalance: document.querySelector('#summary-balance'),
       summaryTotal: document.querySelector('#summary-total'),
       summaryWithdrawals: document.querySelector('#summary-withdrawals'),
@@ -573,49 +453,6 @@ if (typeof document !== 'undefined') {
       dom.message.textContent = text;
       dom.message.className = `app-message ${type}`;
       dom.message.hidden = false;
-    }
-
-    /** Diálogo de confirmação próprio (acessível, com foco preso e Esc para cancelar). */
-    function confirmar({ titulo = 'Confirmar', mensagem, textoConfirmar = 'Confirmar', perigoso = false }) {
-      return new Promise((resolve) => {
-        const dialog = document.createElement('dialog');
-        dialog.className = 'app-dialog';
-
-        const heading = document.createElement('h2');
-        heading.textContent = titulo;
-        const texto = document.createElement('p');
-        texto.textContent = mensagem;
-
-        const acoes = document.createElement('div');
-        acoes.className = 'app-dialog-actions';
-        const cancelar = document.createElement('button');
-        cancelar.type = 'button';
-        cancelar.className = 'button button-secondary';
-        cancelar.textContent = 'Cancelar';
-        const confirmarBotao = document.createElement('button');
-        confirmarBotao.type = 'button';
-        confirmarBotao.className = `button${perigoso ? ' button-danger' : ''}`;
-        confirmarBotao.textContent = textoConfirmar;
-        acoes.append(cancelar, confirmarBotao);
-
-        dialog.append(heading, texto, acoes);
-        dialog.setAttribute('aria-label', titulo);
-        dialog.addEventListener('cancel', (evento) => {
-          evento.preventDefault();
-          dialog.close('false');
-        });
-        dialog.addEventListener('close', () => {
-          const resposta = dialog.returnValue === 'true';
-          dialog.remove();
-          resolve(resposta);
-        });
-        cancelar.addEventListener('click', () => dialog.close('false'));
-        confirmarBotao.addEventListener('click', () => dialog.close('true'));
-
-        document.body.append(dialog);
-        dialog.showModal();
-        confirmarBotao.focus();
-      });
     }
 
     function showSellerError(text = '') {
@@ -723,7 +560,7 @@ if (typeof document !== 'undefined') {
             showSellerError();
             dom.sellerName.focus();
           }),
-          createButton('Excluir vendedor', 'button button-danger', async () => {
+          createButton('Excluir vendedor', 'button button-danger', () => {
             const commissionCount = state.commissions.filter((commission) => commission.sellerId === seller.id).length;
             const withdrawalCount = state.withdrawals.filter((withdrawal) => withdrawal.sellerId === seller.id).length;
             const linkedRecords = [
@@ -734,12 +571,7 @@ if (typeof document !== 'undefined') {
               ? `Excluir ${seller.name} e ${linkedRecords}? Todo o histórico da carteira será apagado.`
               : `Excluir o vendedor ${seller.name}?`;
 
-            if (!(await confirmar({
-              titulo: 'Excluir vendedor',
-              mensagem: confirmation,
-              textoConfirmar: 'Excluir',
-              perigoso: true,
-            }))) return;
+            if (!window.confirm(confirmation)) return;
             const nextState = removeSellerAndMovements(state, seller.id);
             state.sellers = nextState.sellers;
             state.commissions = nextState.commissions;
@@ -871,13 +703,8 @@ if (typeof document !== 'undefined') {
       dom.withdrawalSeller.value = activeWalletSellerId || '';
     }
 
-    async function deleteWithdrawal(record) {
-      if (!(await confirmar({
-        titulo: 'Excluir retirada',
-        mensagem: 'Excluir esta retirada? O valor voltará à carteira do vendedor.',
-        textoConfirmar: 'Excluir',
-        perigoso: true,
-      }))) return;
+    function deleteWithdrawal(record) {
+      if (!window.confirm('Excluir esta retirada? O valor voltará à carteira do vendedor.')) return;
       state.withdrawals = state.withdrawals.filter((withdrawal) => withdrawal.id !== record.id);
       if (!persistState()) return;
       renderAll();
@@ -1044,13 +871,8 @@ if (typeof document !== 'undefined') {
       dom.commissionProduct.focus();
     }
 
-    async function deleteCommission(record) {
-      if (!(await confirmar({
-        titulo: 'Excluir comissão',
-        mensagem: 'Excluir esta comissão? Esta ação não pode ser desfeita.',
-        textoConfirmar: 'Excluir',
-        perigoso: true,
-      }))) return;
+    function deleteCommission(record) {
+      if (!window.confirm('Excluir esta comissão? Esta ação não pode ser desfeita.')) return;
       const remainingCommissions = state.commissions.filter((commission) => commission.id !== record.id);
       if (!hasNonNegativeWalletBalance(record.sellerId, remainingCommissions, state.withdrawals)) {
         showMessage('Não é possível excluir esta comissão porque a carteira do vendedor ficaria negativa.', 'error');
@@ -1165,8 +987,8 @@ if (typeof document !== 'undefined') {
       }
     }
 
-    function baixarArquivo(content, filename, mime = 'text/plain;charset=utf-8') {
-      const url = URL.createObjectURL(new Blob([content], { type: mime }));
+    function downloadCsv(content, filename) {
+      const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' }));
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
@@ -1174,56 +996,6 @@ if (typeof document !== 'undefined') {
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
-    }
-
-    function paraISO(data) {
-      return new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    }
-
-    function periodoMesAtual() {
-      const hoje = new Date();
-      const primeiro = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-      const ultimo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-      return { startDate: paraISO(primeiro), endDate: paraISO(ultimo) };
-    }
-
-    function renderClosing() {
-      const periodo = { startDate: dom.closingStart.value, endDate: dom.closingEnd.value };
-      const closing = buildClosing(state.commissions, state.withdrawals, periodo);
-      dom.closingBody.replaceChildren();
-
-      if (!closing.rows.length) {
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
-        cell.colSpan = 4;
-        cell.className = 'table-empty';
-        cell.textContent = 'Nenhuma movimentação no período selecionado.';
-        row.append(cell);
-        dom.closingBody.append(row);
-      } else {
-        for (const linha of closing.rows) {
-          const row = document.createElement('tr');
-          row.append(
-            createCell(linha.sellerName),
-            createCell(formatCurrency(linha.commissionTotal)),
-            createCell(formatCurrency(linha.withdrawalTotal)),
-            createCell(formatCurrency(linha.balance)),
-          );
-          dom.closingBody.append(row);
-        }
-        const rodape = document.createElement('tr');
-        rodape.className = 'closing-total';
-        rodape.append(
-          createCell('Total'),
-          createCell(formatCurrency(closing.totals.commissionTotal)),
-          createCell(formatCurrency(closing.totals.withdrawalTotal)),
-          createCell(formatCurrency(closing.totals.balance)),
-        );
-        dom.closingBody.append(rodape);
-      }
-
-      dom.closingStatus.textContent = `${closing.rows.length} vendedor(es) com movimentação no período.`;
-      return closing;
     }
 
     function renderAll() {
@@ -1235,7 +1007,6 @@ if (typeof document !== 'undefined') {
       renderWalletMovements();
       renderSummary();
       renderHistory();
-      renderClosing();
       updateWithdrawalPreview();
     }
 
@@ -1405,66 +1176,8 @@ if (typeof document !== 'undefined') {
         showMessage('Não há comissões para exportar com os filtros atuais.', 'info');
         return;
       }
-      baixarArquivo(buildCommissionCsv(commissions), `comissoes-${todayLocal()}.csv`, 'text/csv;charset=utf-8');
+      downloadCsv(buildCommissionCsv(commissions), `comissoes-${todayLocal()}.csv`);
       showMessage('CSV exportado.', 'success');
-    });
-
-    /* -------- Fechamento do período -------- */
-    dom.closingStart.addEventListener('change', renderClosing);
-    dom.closingEnd.addEventListener('change', renderClosing);
-    dom.closingExport.addEventListener('click', () => {
-      const periodo = { startDate: dom.closingStart.value, endDate: dom.closingEnd.value };
-      if (periodo.startDate && periodo.endDate && periodo.startDate > periodo.endDate) {
-        showMessage('No fechamento, a data inicial não pode ser posterior à data final.', 'error');
-        return;
-      }
-      const closing = renderClosing();
-      if (!closing.rows.length) {
-        showMessage('Não há movimentação para exportar nesse período.', 'info');
-        return;
-      }
-      baixarArquivo(buildClosingCsv(closing, periodo), `fechamento-${periodo.startDate || 'inicio'}-a-${periodo.endDate || todayLocal()}.csv`, 'text/csv;charset=utf-8');
-      showMessage('Fechamento exportado.', 'success');
-    });
-
-    /* -------- Backup em JSON -------- */
-    dom.exportJson.addEventListener('click', () => {
-      baixarArquivo(
-        JSON.stringify(buildBackup(state), null, 2),
-        `comissoes-backup-${todayLocal()}.json`,
-        'application/json',
-      );
-      showMessage('Backup exportado. Guarde o arquivo em um local seguro.', 'success');
-    });
-
-    dom.importJson.addEventListener('click', () => dom.importFile.click());
-    dom.importFile.addEventListener('change', async () => {
-      const arquivo = dom.importFile.files?.[0];
-      dom.importFile.value = '';
-      if (!arquivo) return;
-
-      const estado = parseBackup(await arquivo.text());
-      if (!estado) {
-        showMessage('Arquivo inválido. Selecione um backup .json exportado por este painel.', 'error');
-        return;
-      }
-
-      const confirmado = await confirmar({
-        titulo: 'Importar backup',
-        mensagem: `Isto substitui os dados atuais por ${estado.sellers.length} vendedor(es), ${estado.commissions.length} comissão(ões) e ${estado.withdrawals.length} retirada(s). Deseja continuar?`,
-        textoConfirmar: 'Substituir',
-        perigoso: true,
-      });
-      if (!confirmado) return;
-
-      state = estado;
-      activeWalletSellerId = null;
-      resetSellerForm();
-      resetCommissionForm();
-      resetWithdrawalForm();
-      if (!persistState()) return;
-      renderAll();
-      showMessage('Backup importado com sucesso.', 'success');
     });
     for (const button of dom.sortButtons) {
       button.addEventListener('click', () => {
@@ -1478,9 +1191,6 @@ if (typeof document !== 'undefined') {
     }
 
     dom.sellerCancel.addEventListener('click', resetSellerForm);
-    const periodoInicial = periodoMesAtual();
-    dom.closingStart.value = periodoInicial.startDate;
-    dom.closingEnd.value = periodoInicial.endDate;
     resetCommissionForm();
     resetWithdrawalForm();
     renderAll();

@@ -225,58 +225,6 @@
         </div>
       </section>
 
-      <section id="fechamento" class="panel" aria-labelledby="fechamento-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="fechamento-title">Fechamento do período</h2>
-          </div>
-        </div>
-        <div class="filter-grid" aria-label="Período do fechamento">
-          <div class="field">
-            <label for="closing-start">Data inicial</label>
-            <input id="closing-start" type="date">
-          </div>
-          <div class="field">
-            <label for="closing-end">Data final</label>
-            <input id="closing-end" type="date">
-          </div>
-        </div>
-        <div class="form-actions history-actions">
-          <button id="closing-export" class="button button-secondary" type="button">Exportar fechamento (CSV)</button>
-        </div>
-        <p id="closing-status" class="table-status" aria-live="polite"></p>
-        <div class="table-scroll" tabindex="0">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Vendedor</th>
-                <th scope="col">Comissões</th>
-                <th scope="col">Retiradas</th>
-                <th scope="col">Saldo do período</th>
-              </tr>
-            </thead>
-            <tbody id="closing-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="backup" class="panel" aria-labelledby="backup-title">
-        <div class="section-heading">
-          <div>
-            <h2 id="backup-title">Backup dos dados</h2>
-          </div>
-        </div>
-        <p class="form-hint">
-          Exporte um arquivo <strong>.json</strong> com vendedores, comissões e retiradas e guarde-o em local seguro.
-          Use <strong>Importar backup</strong> para restaurar em outro aparelho ou navegador — a importação substitui os dados atuais.
-        </p>
-        <div class="form-actions history-actions">
-          <button id="export-json" class="button button-secondary" type="button">Exportar backup (.json)</button>
-          <button id="import-json" class="button button-secondary" type="button">Importar backup</button>
-          <input id="import-file" type="file" accept=".json,application/json" hidden>
-        </div>
-      </section>
-
       <footer class="site-footer">
         <p>
           Os dados ficam salvos apenas neste navegador e neste dispositivo — não sincronizam entre
