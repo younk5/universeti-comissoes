@@ -1,8 +1,0 @@
-.git
-.worktrees
-docs
-tests
-README.md
-.env*
-.vercel
-.vercelignore

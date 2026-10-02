@@ -1,82 +1,74 @@
-# Universe TI — Controle de Comissões
+# Galaxy Smart — Controle de Comissões
 
-Painel interno da Universe TI para controlar vendedores, registrar vendas e definir as comissões a pagar.
+Plataforma hospedada para administrar vendedores e comissões. O navegador fala apenas com a API Node.js na mesma origem; a API usa Supabase Auth e PostgreSQL no servidor. O cliente não recebe URL, chave, SDK ou acesso direto ao banco.
 
-## Como abrir
+A base começa vazia. Dados de versões locais, `localStorage`, retiradas e backups legados não são importados.
 
-1. Abra a pasta do projeto.
-2. Dê duplo clique em `index.html`.
-3. O navegador abrirá a aplicação. Não é necessário instalar nada nem criar conta.
+## Manual do usuário
 
-Para desenvolvimento, também é possível abrir um servidor local na pasta do projeto:
+Para quem vai usar a plataforma no dia a dia (administradores e vendedores), o passo a passo em linguagem simples está em [docs/MANUAL-USUARIO.md](docs/MANUAL-USUARIO.md). As versões diagramadas, prontas para imprimir, importar no Google Docs ou abrir no Word, estão em [docs/MANUAL-USUARIO.docx](docs/MANUAL-USUARIO.docx) e [docs/MANUAL-USUARIO.html](docs/MANUAL-USUARIO.html).
 
-```bash
-python -m http.server 4173 --bind 127.0.0.1
-```
+## Requisitos
 
-Depois, acesse `http://127.0.0.1:4173/`.
+- Node.js 22 ou superior
+- `npm`
+- Projeto Supabase autorizado, vazio e com as migrations versionadas aplicadas
 
-## Como cadastrar vendedores
+## Configuração local
 
-Na seção **Vendedores**, informe somente o nome. Use **Editar vendedor** para atualizar o cadastro.
+1. Instale dependências:
 
-Ao excluir um vendedor que já tenha comissões ou retiradas, o app avisa quantos registros serão apagados junto e só remove tudo depois da confirmação. Assim, excluir um vendedor limpa a carteira dele por completo — exporte o CSV antes se quiser guardar o histórico.
+   ```bash
+   npm install
+   ```
 
-## Como registrar e editar comissões
+2. Copie o modelo sem versionar o resultado:
 
-1. Cadastre pelo menos um vendedor.
-2. Em **Registrar comissão**, escolha o vendedor, informe o valor da venda e selecione o tipo de comissão.
-3. Para percentual, informe por exemplo `10` para 10%. Para valor fixo, informe por exemplo `150,00`.
-4. Confira a prévia do valor calculado antes de salvar.
+   ```powershell
+   Copy-Item .env.example .env
+   ```
 
-Valores aceitam o formato brasileiro: `1.500`, `1.500,00`, `1234,56` e também `1234.56`.
+3. Preencha somente no ambiente local seguro:
 
-Produto/serviço e observação não são obrigatórios. A data começa preenchida com o dia atual, mas pode ser alterada.
+   - `SUPABASE_URL`
+   - `SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
 
-No histórico, use **Editar comissão** para corrigir qualquer registro. A comissão calculada é salva no momento do lançamento; mudanças futuras não alteram vendas antigas.
+   A chave de serviço é exclusiva do servidor: não use prefixo `VITE_`, não a exponha ao navegador e não envie `.env`, senhas, tokens, dumps ou logs ao Git.
 
-## Carteiras e retiradas
+4. Inicie o desenvolvimento:
 
-Cada vendedor possui uma carteira própria. Toda comissão registrada entra como crédito nessa carteira; o **Saldo disponível** geral é a soma dos saldos de todos os vendedores.
+   ```powershell
+   $env:NODE_OPTIONS = '--env-file=.env'
+   npm run dev
+   ```
 
-Na seção **Carteiras dos vendedores**, selecione uma carteira para ver o saldo, o total de comissões, o total retirado e o histórico cronológico de créditos e débitos.
+   A API escuta em `http://127.0.0.1:3000`; o Vite entrega a interface e encaminha `/api`. `server.js` é somente a entrada local: `npm start` também serve o `dist` já construído para verificação local.
 
-Em **Carteira e retirada**, escolha o vendedor, informe o valor, a data e uma observação opcional. O sistema bloqueia retiradas maiores que o saldo daquela carteira. Excluir uma retirada devolve automaticamente o valor ao vendedor.
+## Primeiro administrador
 
-Uma comissão que já tenha sido retirada não pode ser excluída nem reduzida a ponto de deixar a carteira negativa.
-
-Ao excluir um vendedor, o app informa quantas comissões e retiradas serão removidas junto. Confirme somente quando quiser apagar toda a carteira daquele vendedor.
-
-## Filtros, ordenação e exportação
-
-- Filtre por vendedor e/ou por data inicial e final.
-- Clique nos títulos de vendedor, valor de venda, comissão ou data para alterar a ordenação.
-- Os cartões de totais, o gráfico e a exportação consideram exatamente os filtros ativos. O cartão **Saldo disponível** mostra o saldo acumulado da carteira e acompanha apenas o vendedor selecionado (não o período).
-- Clique em **Exportar CSV** para baixar os registros visíveis. O arquivo abre em Excel, LibreOffice Calc e outros programas de planilha.
-
-## Onde os dados ficam
-
-Os dados ficam somente no armazenamento local deste navegador e deste dispositivo. Eles continuam disponíveis após atualizar a página, mas não sincronizam com outro computador, outro celular ou outro navegador.
-
-## Como fazer backup
-
-Use **Exportar CSV** com os filtros desejados regularmente. Guarde o arquivo baixado em um local seguro. O CSV é a cópia de segurança desta versão, pois não há servidor ou nuvem.
-
-## Como apagar todos os dados
-
-A aplicação não oferece um botão de apagar tudo para evitar perda acidental. Para remover todos os dados deste navegador, abra as ferramentas de desenvolvedor do navegador, acesse o Console e execute:
-
-```js
-localStorage.removeItem('controle-comissoes.v1');
-location.reload();
-```
-
-Essa ação é permanente nesta versão. Exporte um CSV antes de executar se quiser preservar o histórico.
-
-## Testes
-
-As funções de cálculo, validação e formatação são testadas com o test runner do Node:
+Com o banco Supabase vazio e autorizado, defina localmente `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_USERNAME` e `BOOTSTRAP_ADMIN_PASSWORD`. O piso efetivo de senha é 6 caracteres, imposto pelo Supabase GoTrue hospedado.
 
 ```bash
-node --test tests/app.test.js
+node --env-file=.env scripts/bootstrap-admin.js
 ```
+
+Execute esse bootstrap uma única vez, de uma estação segura. O script interrompe se já existir administrador ou se a criação concorrente estiver em andamento. Não use as variáveis `BOOTSTRAP_ADMIN_*` no build ou no deploy; remova a senha do ambiente após a criação.
+
+## Verificações locais
+
+```bash
+npm test
+npm run build
+npm run check
+npm run check:secrets
+git diff --check
+```
+
+Para validar a aplicação empacotada, construa e rode a API localmente com ambiente de teste; então consulte `/health` e `/`.
+
+## Produção
+
+Na Vercel, `npm run build` produz `dist`, entregue estaticamente pela CDN. A função `api/[...path].js` atende `/api/*`; `api/health.js` atende o rewrite exato `/health → /api/health`. A interface permanece sem fallback SPA amplo: a interface não possui rotas profundas no cliente.
+
+O procedimento autorizado, variáveis de Production e recuperação estão em [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) e [docs/OPERATIONS.md](docs/OPERATIONS.md). Este repositório não cria contas, recursos externos ou deploys.

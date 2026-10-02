@@ -1,144 +1,173 @@
-# PRD — Controle de Comissões
+# PRD — Galaxy Smart: Controle de Comissões Multiusuário
 
-**Status:** validado para especificação em 07/09/2026
-**Versão:** 1.1
+**Status:** contrato de runtime vigente
+**Versão:** 2.1
 
 ## 1. Visão geral
 
-Aplicação web local para registrar vendedores e acompanhar comissões de vendas sem servidor. Deve abrir diretamente no navegador e manter os dados no `localStorage` do navegador.
+Galaxy Smart é uma aplicação web para administrar vendedores e suas comissões. A API Express em Node.js é a única camada de autorização e regra de negócio; Supabase Auth mantém identidades e PostgreSQL mantém os dados protegidos. O navegador opera somente contra a API same-origin e não acessa Supabase, tabelas, RPCs ou Auth diretamente.
 
-## 2. Problema e objetivo
+Este documento descreve o contrato do runtime no código. Ele não declara que uma configuração, migration ou deploy de produção já foi executado.
 
-O usuário precisa registrar comissões de vários vendedores, consultar o histórico por pessoa e período, calcular corretamente percentuais e visualizar totais sem depender de planilhas ou de um backend.
+A base Supabase autorizada começa vazia. Não existe migração de dados da versão local, de `localStorage`, de retiradas ou de backups antigos.
 
-**Objetivo principal:** inserir, revisar e exportar registros de comissão com poucos passos, em computador e celular.
+## 2. Decisões confirmadas
 
-## 3. Dados confirmados e pendentes
+| Tema | Decisão |
+|---|---|
+| Hospedagem | Build Vite para `dist` e funções Node.js `api/[...path].js` e `api/health.js`, compatíveis com a configuração Vercel autorizada |
+| Identidade | Supabase Auth com e-mail/senha |
+| Banco de dados | PostgreSQL do Supabase, acessado somente pelos clientes de servidor protegidos |
+| Perfis | `admin` e `seller` |
+| Login | Um campo aceita e-mail ou nome de usuário; a senha é validada pelo Supabase Auth |
+| Comissão | Status `pending`, `paid` ou `voided`; produto de catálogo prevalece sobre a regra padrão global |
+| Base inicial | PostgreSQL Supabase vazio, sem importação ou migração dos dados locais |
+| Vendedor com histórico | Não é excluído destrutivamente; é desativado e o histórico é preservado |
+| Interface | Responsiva, em pt-BR e com identidade Galaxy Smart |
 
-| Item | Situação | Decisão |
-|---|---|---|
-| Cadastro de vendedor | Confirmado | somente nome obrigatório |
-| Registro de comissão | Confirmado | vendedor, venda, tipo/valor da comissão, data e observação |
-| Persistência | Confirmado | `localStorage`, sem servidor |
-| Relatórios | Confirmado | total geral, total por vendedor, gráfico simples |
-| Exportação | Extra simples | CSV com os registros filtrados |
-| Marca, logo e cores | Pendente | interface neutra e legível, sem marca inventada |
-| Login, usuários e permissões | Fora de escopo | não haverá autenticação nesta versão |
+## 3. Personas e permissões
 
-## 4. Personas e trabalho a realizar
+### Administrador comercial
 
-**Hipótese — administrador comercial:** registra uma venda ao ocorrer e precisa conferir quanto cada vendedor acumulou em determinado período.
+Gerencia vendedores, registra e corrige comissões, marca pagamentos e acompanha totais e exportações.
 
-> Quando registro uma venda, quero calcular e guardar a comissão correta para poder pagar e auditar os vendedores com segurança.
+### Vendedor
 
-## 5. Escopo funcional
+Entra na própria carteira, consulta somente as próprias comissões e troca a própria senha. Não cria, altera ou paga comissões.
+
+| Operação | Admin | Seller ativo | Seller desativado |
+|---|---:|---:|---:|
+| Criar, editar ou desativar vendedor | Sim | Não | Não |
+| Redefinir senha de vendedor | Sim | Não | Não |
+| Criar, editar ou excluir comissão | Sim | Não | Não |
+| Marcar comissão como paga, inclusive em lote | Sim | Não | Não |
+| Ver todas as comissões, totais e CSV administrativo | Sim | Não | Não |
+| Ver a própria carteira | Não aplicável | Sim | Não |
+| Trocar a própria senha | Sim | Sim | Não |
+
+A API verifica token Supabase, perfil, papel e estado ativo em cada rota. Ocultar uma ação no front-end não é controle de segurança.
+
+## 4. Escopo funcional
 
 ### MUST — obrigatório
 
-| ID | História de usuário | Critérios de aceite |
+| ID | História | Critérios de aceite |
 |---|---|---|
-| F01 | Cadastrar vendedor | O formulário bloqueia nome vazio, aceita somente o nome e atualiza a lista imediatamente. |
-| F02 | Editar ou excluir vendedor | A edição atualiza o cadastro. A exclusão pede confirmação; se houver movimentações, o aviso informa que todas as comissões e retiradas vinculadas também serão apagadas. |
-| F03 | Registrar comissão | Exige vendedor, valor de venda e tipo/valor de comissão. Produto e observação são opcionais. A data inicia no dia atual, mas pode ser alterada. |
-| F04 | Calcular comissão percentual | Ao escolher percentual, o valor calculado é `valor da venda × percentual ÷ 100`; o valor persistido é o resultado calculado no momento do registro. |
-| F05 | Registrar comissão fixa | Ao escolher valor fixo, o valor informado é salvo como valor da comissão, sem recálculo. |
-| F06 | Consultar histórico | A tabela exibe vendedor, produto/serviço, venda, comissão e data; permite editar e excluir cada linha. |
-| F07 | Filtrar | Filtros por vendedor, data inicial e data final podem ser combinados; lista, totais e exportação refletem o resultado filtrado. |
-| F08 | Ver totais | Exibe total de comissão no filtro atual, saldo disponível geral e resumo por vendedor. |
-| F09 | Persistir dados | Vendedores, comissões e retiradas continuam disponíveis após recarregar a página no mesmo navegador. |
-| F10 | Responsividade e acessibilidade básica | Funciona em telas pequenas, com rótulos, foco visível, navegação por teclado e mensagens de erro legíveis. |
-| F11 | Carteira por vendedor | Cada vendedor possui saldo próprio, calculado por comissões creditadas menos retiradas registradas para ele. A retirada exige vendedor, não pode ultrapassar o saldo e integra o histórico cronológico da carteira. |
+| F01 | Entrar por e-mail ou usuário | Um identificador único aceita e-mail ou nome de usuário; respostas de credencial inválida, perfil ausente ou conta inativa permanecem genéricas. |
+| F02 | Administrar vendedores | Admin cria, edita, redefine senha e desativa vendedores. Nome, e-mail e usuário são obrigatórios; usuário normalizado é único; senha inicial/redefinida observa o piso efetivo de 6 caracteres imposto pelo Supabase GoTrue hospedado. |
+| F03 | Preservar histórico | Vendedor sem histórico pode ser excluído. Vendedor com comissões não pode ser removido destrutivamente: a ação correta é desativar a conta e revogar acesso. |
+| F04 | Registrar comissão | Admin informa vendedor, produto de catálogo opcional ou texto manual, venda, data e observação. Produto ativo de catálogo usa sua regra; item manual usa a comissão padrão global configurada. O navegador envia somente dados operacionais e a API/RPC seleciona e persiste o snapshot da regra. |
+| F05 | Controlar pagamento | Comissão começa em `pending`; ação individual ou em lote altera somente registros pendentes selecionados para `paid` e grava `paidAt`. |
+| F06 | Consultar e filtrar | Filtros de vendedor, período e status atualizam tabela, cartões, gráfico, seleção em lote e CSV de modo consistente. |
+| F07 | Ver carteira isolada | Seller vê apenas sua carteira: a receber (`pending`), já recebido (`paid`) e extrato em leitura. |
+| F08 | Exportar CSV | Admin baixa CSV UTF-8 com BOM para o conjunto filtrado. |
+| F09 | Fazer bootstrap seguro | Script local cria somente o primeiro `admin` em base autorizada e vazia; não imprime senha ou chave privada. |
 
-### SHOULD — incluir nesta versão
+### Fora de escopo
 
-| ID | História de usuário | Critérios de aceite |
-|---|---|---|
-| S01 | Exportar CSV | Baixa um CSV UTF-8 com BOM, contendo os registros atualmente filtrados. |
-| S02 | Ordenar a tabela | Cabeçalhos de vendedor, data, venda e comissão alternam ordem crescente/decrescente. A ordem inicial é a venda mais recente. |
-| S03 | Comparar vendedores visualmente | Gráfico de barras simples, sem bibliotecas externas, mostra comissão por vendedor no filtro atual. |
+- Recuperação de senha por e-mail, cadastro público e permissões adicionais.
+- Pagamento automático, recibos ou cálculo de impostos.
+- Exclusão destrutiva de vendedor que possua histórico.
+- Importação de planilhas, dados locais, retiradas ou backups antigos.
+- Leitura/escrita direta de Supabase pelo cliente.
 
-### WON'T — fora de escopo desta entrega
+## 5. Modelo de dados
 
-- Login, recuperação de senha, multiusuário ou permissões.
-- Sincronização em nuvem, API ou banco de dados.
-- Emissão de recibos, cálculo de impostos ou pagamento automático.
-- Importação de planilhas.
-
-## 6. Requisitos não funcionais
-
-- Stack: HTML, CSS e JavaScript puro; sem build e sem dependências externas.
-- A aplicação deve abrir por duplo clique em `index.html` ou via servidor estático local.
-- Valores monetários são armazenados como números em reais e exibidos no formato `pt-BR` / BRL.
-- Entradas numéricas aceitam vírgula ou ponto decimal, normalizadas antes do cálculo.
-- O código não contém dados de exemplo persistentes, segredos ou chamadas de rede.
-- O layout prioriza uma coluna em celular e duas colunas quando houver espaço no desktop.
-
-## 7. Modelo de dados
+### `profiles`
 
 ```text
-localStorage key: controle-comissoes.v1
-
-{
-  sellers: [{
-    id: string,
-    name: string,
-    createdAt: ISO-8601
-  }],
-  commissions: [{
-    id: string,
-    sellerId: string,
-    sellerName: string,
-    product: string,
-    saleValue: number,
-    commissionType: "percentage" | "fixed",
-    commissionInput: number,
-    commissionValue: number,
-    saleDate: "YYYY-MM-DD",
-    note: string,
-    createdAt: ISO-8601,
-    updatedAt: ISO-8601
-  }],
-  withdrawals: [{
-    id: string,
-    sellerId: string,
-    sellerName: string,
-    value: number,
-    withdrawalDate: "YYYY-MM-DD",
-    note: string,
-    createdAt: ISO-8601
-  }]
-}
+id, role ('admin' | 'seller'), display_name, username, username_normalized,
+phone, active, session_not_before, created_at, updated_at, archived_at
 ```
 
-`sellerName` é uma cópia histórica para a comissão continuar legível se dados antigos forem importados ou ficarem sem referência. A exclusão normal pelo app é bloqueada enquanto houver histórico ligado ao vendedor.
+`profiles.username_normalized` tem unicidade no PostgreSQL e permanece normalizado em minúsculas. Nenhuma regra financeira pertence ao perfil do vendedor nem ao contrato público.
 
-## 8. Fluxos e tratamento de erros
+### `products`
 
-1. **Primeiro uso:** a área de comissões orienta a cadastrar um vendedor antes de permitir salvar uma venda.
-2. **Nova comissão:** usuário escolhe vendedor, informa valor da venda e percentual ou valor fixo; o cálculo aparece antes de salvar.
-3. **Carteiras:** cada comissão entra como crédito na carteira do vendedor. A carteira mostra saldo, totais e movimentações em ordem cronológica inversa.
-4. **Retirada:** usuário seleciona o vendedor, informa valor e data; o sistema bloqueia valores maiores que o saldo daquela carteira.
-5. **Edição:** o registro existente preenche o mesmo formulário; salvar atualiza em vez de duplicar, sem permitir que uma carteira fique negativa.
-6. **Filtros:** qualquer alteração atualiza tabela, cartões, gráfico e conjunto exportado.
-7. **Erros:** campos obrigatórios vazios, números inválidos, valores negativos, retirada maior que o saldo da carteira e período invertido apresentam mensagens específicas próximas ao formulário.
-8. **Exclusões:** vendedor, comissão ou retirada pedem confirmação nativa antes da ação. Ao excluir um vendedor, o aviso apresenta as comissões e retiradas que também serão apagadas; uma comissão isolada não pode ser excluída se a carteira correspondente ficar negativa.
-9. **Falha de armazenamento:** erro de `localStorage` informa o usuário sem afirmar que a alteração foi salva.
+```text
+id, name, active, commission_type ('percentage' | 'fixed'),
+commission_rate_bps | commission_fixed_cents, created_at, updated_at
+```
 
-## 9. Riscos e mitigação
+Um produto ativo de catálogo tem uma regra individual. Ao criar ou editar uma comissão com `product_id`, essa regra autorizada é a fonte do snapshot e prevalece sobre a comissão padrão global.
 
-| Risco | Impacto | Mitigação |
-|---|---|---|
-| Limpeza de dados do navegador | perda dos dados locais | aviso no README e exportação CSV disponível |
-| Erro de digitação em valores | comissão incorreta | validação, prévia do cálculo e edição do registro |
-| Exclusão acidental | perda de histórico ou saldo incorreto | confirmação com contagem de movimentações vinculadas e proteção contra carteira negativa na exclusão isolada de comissão |
-| Dados sem vendedor por edição manual do armazenamento | histórico inconsistente | usar `sellerName` como fallback visual |
+### `commission_default_rule`
 
-## 10. Critérios finais de aceite
+```text
+id (singleton true), configured, commission_type ('percentage' | 'fixed'),
+commission_rate_bps | commission_fixed_cents, updated_at
+```
 
-- [ ] É possível cadastrar, editar e excluir vendedores sem comissões vinculadas.
-- [ ] É possível registrar comissão percentual e fixa, e os cálculos batem.
-- [ ] Dados persistem após recarregar a página.
-- [ ] Filtros alteram a tabela, totais, gráfico e CSV de modo consistente.
-- [ ] Edição e exclusão de comissão funcionam com confirmação para exclusão.
-- [ ] A interface não possui overflow horizontal em desktop ou celular.
-- [ ] O JavaScript passa em verificação de sintaxe e os cenários de teste automatizados passam.
+A única regra global é obrigatória para uma comissão sem `product_id`. Enquanto `configured` não for verdadeiro, a API recusa lançamento manual com erro acionável para configuração em **Produtos**. A alteração da regra recalcula somente comissões `pending` sem produto de catálogo.
+
+### `commissions`
+
+```text
+id, seller_id, seller_name_snapshot, product_id (nulo para item manual), product,
+sale_value_cents, commission_type ('percentage' | 'fixed'),
+commission_rate_bps | commission_fixed_cents, commission_value_cents,
+sale_date ('YYYY-MM-DD'), status ('pending' | 'paid' | 'voided'), paid_at,
+note, created_at, updated_at
+```
+
+O produto, vendedor e regra aplicada ficam gravados como snapshots históricos. A alteração de regra de produto só recalcula pendências daquele produto; a alteração da regra global só recalcula pendências sem `product_id`. Comissões pagas, anuladas e vinculadas a produto não são alteradas pela regra global.
+
+## 6. Arquitetura e segurança
+
+> **Runtime vigente.** Esta seção é a referência para a operação do aplicativo e seus limites de acesso.
+
+```text
+Navegador
+  ├─ access token somente em memória
+  └─ refresh token no cookie host-only HttpOnly, Secure e SameSite=Strict
+                                  ↓ HTTPS / API do mesmo domínio
+                         Express na Vercel
+                                  ↓ clientes de servidor
+                    Supabase Auth + PostgreSQL
+                         └─ RLS deny-all e grants restritos
+```
+
+- O navegador chama somente a API Express same-origin; ele não recebe `SUPABASE_SERVICE_ROLE_KEY`, não estabelece cliente Supabase e não acessa tabelas, RPCs ou Auth diretamente. O access token retornado pela API fica apenas em memória. O refresh token fica no cookie de produção `__Host-galaxy-smart-refresh`, com `Path=/`, sem atributo `Domain` (host-only), `HttpOnly`, `Secure` e `SameSite=Strict`.
+- A API é a única camada de regra de negócio e autorização. Em cada requisição autenticada, ela valida o token com Supabase Auth e exige uma sessão não revogada em `app_session_registry`, um perfil ativo e `session_not_before` compatível com a emissão do token.
+- Supabase Auth mantém as identidades de e-mail/senha. PostgreSQL mantém `profiles`, com os papéis `admin` e `seller`, as comissões, os lotes/eventos de pagamento, o registro de sessões e o bloqueio de bootstrap. `profiles.id` referencia `auth.users.id`.
+- As tabelas do esquema público têm RLS habilitada e forçada, sem políticas permissivas: o comportamento para `PUBLIC`, `anon` e `authenticated` é deny-all. Os grants de tabelas e as execuções de RPC são concedidos explicitamente apenas a `service_role`.
+- `SUPABASE_SERVICE_ROLE_KEY` existe exclusivamente nas variáveis protegidas das funções Vercel. `SUPABASE_URL` e a chave publicável são usadas pelos clientes de servidor sem persistir sessão; a service role não é enviada ao navegador, versionada ou registrada em log. Senhas de bootstrap, tokens e outros segredos também não são versionados nem registrados.
+- Valores monetários são representados em centavos (`bigint` no PostgreSQL), taxas percentuais em pontos-base e cálculos no JavaScript usam `BigInt`; não se usa ponto flutuante para calcular comissões. O banco calcula e armazena o valor percentual a partir de centavos e pontos-base.
+- O navegador pode mostrar uma prévia de regra recebida da API, mas não escolhe autoridade financeira: `POST` e `PATCH` de comissão aceitam somente `sellerId`, `productId` opcional, texto manual de produto, `saleValue`, `saleDate` e `note`. Campos como `commissionType`, `commissionInput`, taxa, valor fixo ou valor de comissão enviados pelo navegador são rejeitados. Em edição, `productId: null` é a transição explícita de produto de catálogo para item manual; sem essa propriedade, o servidor preserva o produto já vinculado.
+- As transições financeiras protegidas são RPCs atômicas e auditáveis: `mark_commissions_paid` transforma somente comissões `pending` em `paid`, cria um lote e eventos de pagamento; `void_commission` transforma somente uma comissão `pending` em `voided`, também com lote e evento. Ambas são executáveis somente por `service_role` através da API.
+- A API aplica CSP e cabeçalhos de segurança; `vercel.json` protege também os arquivos estáticos entregues pela Vercel. O contrato de produção usa Node.js 22+, Vite para gerar `dist` estático, funções `api/*.js` para `/api/*` e `api/health.js` para saúde. Somente `/health` é reescrito para `/api/health`; não há rewrite amplo para uma página SPA. `server.js` e `express.static()` ficam restritos à verificação local.
+
+## 7. Fluxos essenciais
+
+1. A pessoa informa e-mail ou nome de usuário e senha. A API normaliza e resolve o identificador sem enumerar e-mails, autentica com Supabase Auth e exige `profiles.active = true`. A resposta mantém o access token somente em memória e grava o refresh token no cookie protegido; falhas de credencial, perfil ausente ou conta inativa permanecem genéricas.
+2. Em login ou refresh, a API registra a sessão de aplicação identificada no token. Nas chamadas seguintes, ela bloqueia token sem sessão ativa, perfil ausente/inativo ou emitido antes de `session_not_before`; logout remove o cookie e invalida a sessão aplicável.
+3. Admin cria ou edita vendedor pela API. A criação cria a identidade no Supabase Auth e o respectivo `profiles` com papel `seller`; falha ao gravar o perfil compensa a identidade recém-criada. Papel, unicidade normalizada e estado ativo são definidos no servidor.
+4. Admin registra ou altera uma comissão ainda `pending`. A API valida o vendedor ativo e os dados operacionais. Com `productId`, a RPC bloqueia o produto ativo e usa sua regra; sem produto, a RPC bloqueia a regra padrão global configurada e usa seu snapshot. A API não aceita regra, taxa, valor fixo ou valor de comissão escolhidos pelo navegador. PostgreSQL persiste o cálculo sem conversão por ponto flutuante; seller ativo recebe somente as comissões cujo `seller_id` é o próprio perfil.
+5. Admin marca uma ou mais comissões pendentes como pagas pela RPC atômica `mark_commissions_paid`; a carteira e os totais passam a refletir os registros `paid` e o lote/evento auditável. A anulação administrativa usa `void_commission` e preserva o registro como `voided`, em vez de apagar o histórico.
+6. Admin desativa vendedor com histórico. A API marca o perfil inativo, avança `session_not_before`, revoga as sessões abertas em `app_session_registry` e bloqueia a identidade no Supabase Auth. Ações e refresh posteriores são recusados, enquanto perfis, comissões e eventos permanecem preservados.
+
+## 8. Requisitos não funcionais
+
+- Node.js 22 ou superior, JavaScript ESM, Express, Vite, Supabase e Vercel.
+- API retorna erros por campo para `400`, autenticação para `401`, autorização/conta inativa para `403`, inexistência para `404` e conflitos para `409`; erros inesperados não expõem stack trace, tokens, chaves ou detalhes internos.
+- O navegador opera somente pelo mesmo domínio da API, com CSP `connect-src 'self'`. Access token não é persistido em armazenamento web; refresh token usa cookie host-only, `HttpOnly`, `Secure` e `SameSite=Strict` em produção. Sessões de aplicação são revogáveis por registro de sessão e por `session_not_before`.
+- PostgreSQL armazena valores em centavos, taxas em pontos-base e aplica limites e integridade de status (`pending`, `paid`, `voided`). A regra individual do produto tem precedência; a regra padrão global é usada apenas sem produto e seus snapshots ficam nas comissões. A aplicação calcula e formata com `BigInt`; valores exibidos usam `pt-BR` / BRL e datas usam `YYYY-MM-DD`.
+- RLS é deny-all para clientes: `PUBLIC`, `anon` e `authenticated` não recebem acesso a tabelas nem a RPCs. Somente o serviço protegido na Vercel usa `service_role`; nenhum cliente recebe essa chave.
+- Desktop e celular funcionam sem rolagem horizontal; controles têm rótulo, foco visível e mensagens legíveis.
+- Testes unitários e de API verificam cálculo em centavos/pontos-base, cookie de sessão, autenticação, autorização, conta desativada, revogação de sessão, isolamento de seller e a ausência de acesso direto a dados. Testes e operações atuais não dependem de Emulator Suite.
+- Migrations Supabase são aplicadas de forma ordenada antes do bootstrap e antes de validar produção. O banco Supabase começa vazio, sem migração de `localStorage`, retiradas ou backups antigos; criar projeto/configurar Supabase ou Vercel continua sendo decisão explícita e autorizada do usuário.
+
+## 9. Critérios de conclusão
+
+- [ ] As migrations Supabase necessárias estão aplicadas no projeto autorizado, incluindo tabelas, constraints, RLS forçada, revogação de grants de cliente e grants/RPCs exclusivos de `service_role`.
+- [ ] Admin e seller entram por e-mail e por nome de usuário pela API same-origin; access token fica somente em memória e refresh token usa cookie host-only `HttpOnly`, `Secure` e `SameSite=Strict`.
+- [ ] A API aceita somente sessão de aplicação não revogada, perfil ativo, papel autorizado e token emitido após `session_not_before`; logout, redefinição de senha e desativação invalidam o acesso conforme aplicável.
+- [ ] Admin administra vendedores e comissões; seller não altera dados financeiros nem acessa tabelas ou RPCs Supabase diretamente.
+- [ ] Valores em centavos, pontos-base e `BigInt` preservam cálculo e exibição em BRL sem ponto flutuante; `pending`, `paid` e `voided` controlam carteira e totais administrativos.
+- [ ] Pagamento em lote e anulação usam RPCs atômicas, registram lote/evento auditável e não apagam histórico financeiro.
+- [ ] A regra padrão global e as regras individuais de catálogo são aplicadas somente por RPCs; lançamentos manuais sem regra configurada são recusados e payloads do navegador não determinam valores financeiros.
+- [ ] Vendedor com histórico é desativado, tem identidade e sessões bloqueadas, e mantém perfis, comissões e eventos preservados.
+- [ ] O banco Supabase autorizado começa vazio e nenhum dado local é migrado; o bootstrap controlado cria somente o primeiro admin em banco vazio, sem imprimir senha ou chave de serviço.
+- [ ] A Vercel está configurada com build, funções, cabeçalhos e variáveis Supabase protegidas; a service role não é exposta ao navegador.
+- [ ] Um deploy real autorizado foi validado contra a Vercel configurada, incluindo `/health`, autenticação same-origin, restrição de RLS/grants e fluxos administrativos essenciais.
+- [ ] Testes, build, auditoria de segredos e `git diff --check` foram executados antes de qualquer publicação autorizada.

@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual do Usuário — Controle de Comissões | Universe TI</title>
+<style>
+  :root {
+    --ink: #1f2430;
+    --muted: #5b6472;
+    --line: #e3e6ee;
+    --brand: #4f46e5;
+    --brand-soft: #eef0ff;
+    --accent: #0f766e;
+    --accent-soft: #e6f5f2;
+    --warn: #b45309;
+    --warn-soft: #fff5e6;
+    --danger: #b42318;
+    --danger-soft: #fdecea;
+    --surface: #f7f8fc;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #f2f3f8;
+    color: var(--ink);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.62;
+  }
+
+  .sheet {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 0 56px 64px;
+    box-shadow: 0 18px 60px rgb(20 24 40 / 10%);
+  }
+
+  .cover {
+    margin: 0 -56px 40px;
+    padding: 46px 56px 38px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #0f766e);
+    color: #fff;
+  }
+
+  .cover__eyebrow {
+    margin: 0 0 10px;
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    opacity: .85;
+  }
+
+  .cover h1 {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1.15;
+    letter-spacing: -.01em;
+  }
+
+  .cover__subtitle {
+    margin: 12px 0 0;
+    font-size: 16px;
+    max-width: 620px;
+    opacity: .95;
+  }
+
+  .cover__meta {
+    margin: 22px 0 0;
+    font-size: 12.5px;
+    opacity: .9;
+  }
+
+  h2 {
+    margin: 44px 0 6px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--brand-soft);
+    color: var(--brand);
+    font-size: 22px;
+    letter-spacing: -.01em;
+  }
+
+  h3 {
+    margin: 26px 0 4px;
+    color: var(--ink);
+    font-size: 17px;
+  }
+
+  h4 {
+    margin: 18px 0 2px;
+    color: var(--muted);
+    font-size: 14px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  p { margin: 8px 0; }
+
+  ul, ol { margin: 8px 0 8px 22px; padding: 0; }
+  li { margin: 4px 0; }
+
+  a { color: var(--brand); }
+
+  strong { color: var(--ink); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 6px;
+    font-size: 14.5px;
+  }
+
+  th, td {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--brand-soft);
+    color: #3730a3;
+    font-size: 13.5px;
+    letter-spacing: .01em;
+  }
+
+  tbody tr:nth-child(even) td { background: #fafbff; }
+
+  .toc {
+    margin: 26px 0 8px;
+    padding: 20px 24px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+
+  .toc h2 {
+    margin: 0 0 10px;
+    border: 0;
+    padding: 0;
+    font-size: 15px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .toc ol { margin: 0 0 0 20px; columns: 2; column-gap: 34px; }
+  .toc li { break-inside: avoid; }
+
+  .callout {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-left: 4px solid var(--brand);
+    border-radius: 0 12px 12px 0;
+    background: var(--brand-soft);
+  }
+
+  .callout--tip { border-left-color: var(--accent); background: var(--accent-soft); }
+  .callout--warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout--danger { border-left-color: var(--danger); background: var(--danger-soft); }
+
+  .callout p { margin: 4px 0; }
+  .callout strong { display: inline-block; }
+
+  .steps { counter-reset: step; margin: 14px 0; padding: 0; list-style: none; }
+  .steps li {
+    position: relative;
+    margin: 0 0 10px;
+    padding: 2px 0 2px 42px;
+  }
+  .steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 28px;
+  }
+
+  .kbd {
+    display: inline-block;
+    padding: 1px 7px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .lead {
+    font-size: 16px;
+    color: var(--muted);
+  }
+
+  .grid-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 16px 0;
+  }
+
+  .card {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .card h4 { margin-top: 0; color: var(--brand); }
+
+  .footer-note {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .page-break { break-before: page; page-break-before: always; }
+
+  @media print {
+    body { background: #fff; font-size: 11.5pt; }
+    .sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; }
+    .cover { margin: 0 0 22px; padding: 26px 0 22px; border-radius: 0; }
+    .cover h1 { font-size: 26pt; }
+    h2 { break-after: avoid; }
+    table, .callout, .card { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+
+  @media (max-width: 700px) {
+    .sheet { padding: 0 20px 40px; }
+    .cover { margin: 0 -20px 28px; padding: 30px 20px 26px; }
+    .toc ol { columns: 1; }
+    .grid-cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="cover">
+    <p class="cover__eyebrow">Universe TI · Galaxy Smart</p>
+    <h1>Controle de Comissões<br>Manual do Usuário</h1>
+    <p class="cover__subtitle">Um guia simples e completo para administradores e vendedores. Escrito para quem não entende de programação — tudo acontece no navegador, sem instalar nada.</p>
+    <p class="cover__meta">Endereço do sistema: <strong>https://universeti.vercel.app</strong> &nbsp;·&nbsp; Versão 1.0</p>
+  </header>
+
+  <section class="toc">
+    <h2>Sumário</h2>
+    <ol>
+      <li><a href="#oque">O que é este sistema</a></li>
+      <li><a href="#entrar">Como entrar</a></li>
+      <li><a href="#acessos">Os dois tipos de acesso</a></li>
+      <li><a href="#primeiros">Primeiros passos (guia rápido)</a></li>
+      <li><a href="#admin">Guia do Administrador</a></li>
+      <li><a href="#vendedor">Guia do Vendedor</a></li>
+      <li><a href="#ajuda">Ajuda dentro do sistema</a></li>
+      <li><a href="#senha">Ações que pedem a sua senha</a></li>
+      <li><a href="#desativar">Desativar, anular ou excluir?</a></li>
+      <li><a href="#faq">Perguntas frequentes</a></li>
+      <li><a href="#glossario">Glossário simples</a></li>
+      <li><a href="#seguranca">Cuidados e segurança</a></li>
+      <li><a href="#suporte">Suporte</a></li>
+    </ol>
+  </section>
+
+  <h2 id="oque">1. O que é este sistema</h2>
+  <p class="lead">É a plataforma da Universe TI para controlar <strong>vendedores</strong>, <strong>produtos e serviços</strong> e <strong>comissões</strong>.</p>
+  <p>Com ela você consegue:</p>
+  <ul>
+    <li>Cadastrar vendedores e dar acesso a eles.</li>
+    <li>Definir quanto cada produto ou serviço paga de comissão.</li>
+    <li>Registrar vendas e ver, na hora, o valor da comissão.</li>
+    <li>Marcar comissões como pagas.</li>
+    <li>Consultar o histórico financeiro e baixar uma planilha (CSV).</li>
+  </ul>
+  <div class="callout callout--tip">
+    <p><strong>Dica:</strong> o sistema funciona em qualquer navegador moderno (Chrome, Edge, Firefox ou Safari) e também no celular. Nada precisa ser instalado.</p>
+  </div>
+
+  <h2 id="entrar">2. Como entrar</h2>
+  <ol class="steps">
+    <li>Abra o navegador e acesse <strong>https://universeti.vercel.app</strong>.</li>
+    <li>Preencha <strong>Usuário</strong> (seu nome de usuário) e <strong>Senha</strong>. Você também pode entrar digitando seu <strong>e-mail</strong> no lugar do usuário.</li>
+    <li>Clique em <strong>Entrar</strong>.</li>
+  </ol>
+  <p>Para sair, clique em <strong>Sair</strong>, no canto superior direito.</p>
+  <div class="callout callout--warn">
+    <p><strong>Apareceu “Usuário ou senha inválidos”?</strong> Confira se o <span class="kbd">Caps Lock</span> está ligado e se digitou o usuário correto. Se continuar, peça a um administrador para redefinir a sua senha.</p>
+  </div>
+
+  <h2 id="acessos">3. Os dois tipos de acesso</h2>
+  <table>
+    <thead>
+      <tr><th style="width:32%">Acesso</th><th>O que pode fazer</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Administrador</strong></td>
+        <td>Cadastra vendedores e produtos, lança comissões, marca pagamentos, consulta o histórico e gerencia outros administradores. Vê tudo.</td>
+      </tr>
+      <tr>
+        <td><strong>Vendedor</strong></td>
+        <td>Vê apenas a própria carteira: quanto tem a receber, quanto já recebeu e o extrato das comissões. Pode alterar a própria senha.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>O que aparece na tela depende do seu acesso. O vendedor nunca vê dados de outros vendedores.</p>
+
+  <h2 id="primeiros">4. Primeiros passos (guia rápido)</h2>
+  <p>Se você é administrador e está começando agora, siga esta ordem:</p>
+  <ol class="steps">
+    <li><strong>Cadastre um vendedor</strong> — aba <strong>Vendedores</strong>. Anote a senha inicial e entregue à pessoa.</li>
+    <li><strong>Defina a comissão padrão</strong> — aba <strong>Produtos</strong>. É a regra usada nos lançamentos que não têm produto específico.</li>
+    <li><strong>Cadastre seus produtos</strong> — ainda em <strong>Produtos</strong>, com a regra de comissão de cada um.</li>
+    <li><strong>Registre as vendas</strong> — aba <strong>Comissões</strong>. O valor da comissão aparece na prévia antes de salvar.</li>
+    <li><strong>Pague e marque como pago</strong> — selecione as comissões e clique em <strong>Marcar selecionadas como pagas</strong>.</li>
+  </ol>
+  <div class="callout callout--tip">
+    <p><strong>Atalho:</strong> na aba <strong>Resumo</strong> existe a lista <strong>Primeiros passos</strong>. Ela se marca sozinha conforme você faz cada uma dessas tarefas.</p>
+  </div>
+
+  <h2 id="admin" class="page-break">5. Guia do Administrador</h2>
+  <p>Ao entrar, você vê o título <strong>Administração de comissões</strong> e seis abas:</p>
+  <p><strong>Resumo · Vendedores · Comissões · Produtos · Histórico · Administradores</strong></p>
+  <p>Clique no nome da aba para trocar de tela. Você sempre começa na aba <strong>Resumo</strong>.</p>
+
+  <h3>5.1 Resumo — a visão geral do dinheiro</h3>
+  <p>Mostra os números do período:</p>
+  <table>
+    <thead><tr><th style="width:34%">Campo</th><th>Significado</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Vendas registradas</strong></td><td>Soma de todas as vendas lançadas.</td></tr>
+      <tr><td><strong>A pagar</strong></td><td>Total de comissões ainda pendentes (que você deve pagar).</td></tr>
+      <tr><td><strong>Pago</strong></td><td>Total de comissões já pagas.</td></tr>
+      <tr><td><strong>Total de comissões</strong></td><td>Soma de todas as comissões.</td></tr>
+      <tr><td><strong>Registros</strong></td><td>Quantidade de comissões lançadas.</td></tr>
+    </tbody>
+  </table>
+  <p>Abaixo aparece <strong>Totais por vendedor</strong>, com <strong>A pagar</strong>, <strong>Pago</strong> e <strong>Total</strong> de cada pessoa. Comissões <strong>anuladas</strong> ficam fora desses totais.</p>
+  <p>No fim da página está o botão <strong>Baixar cópia administrativa</strong>, que gera uma <strong>planilha do Excel</strong> (<em>.xlsx</em>) com quatro abas: <strong>Resumo</strong> (totais), <strong>Vendedores</strong>, <strong>Comissões</strong> e <strong>Histórico</strong>.</p>
+  <div class="callout callout--warn">
+    <p><strong>Atenção:</strong> a cópia administrativa e o arquivo CSV contêm informações financeiras. Guarde-os com cuidado.</p>
+  </div>
+
+  <h3>5.2 Vendedores — quem recebe comissão</h3>
+  <h4>Cadastrar um vendedor</h4>
+  <ol class="steps">
+    <li>Preencha <strong>Nome</strong>, <strong>Usuário</strong>, <strong>Senha inicial</strong> e, se quiser, <strong>Telefone (opcional)</strong>.</li>
+    <li>Clique em <strong>Cadastrar vendedor</strong>.</li>
+    <li>Anote a <strong>senha inicial</strong> e entregue ao vendedor. Ele poderá trocá-la depois.</li>
+  </ol>
+  <p>O <strong>Usuário</strong> é o que a pessoa digita para entrar. Use algo simples, sem espaços e sem acentos (ex.: <em>joao.silva</em>).</p>
+
+  <h4>Botões de cada vendedor</h4>
+  <table>
+    <thead><tr><th style="width:26%">Botão</th><th>O que faz</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Editar</strong></td><td>Muda nome, usuário e telefone.</td></tr>
+      <tr><td><strong>Desativar</strong></td><td>Bloqueia o acesso, sem apagar nada. Pede a sua senha. É reversível.</td></tr>
+      <tr><td><strong>Ativar</strong></td><td>Aparece para quem está desativado e devolve o acesso na hora.</td></tr>
+      <tr><td><strong>Excluir</strong></td><td><strong>Apaga para sempre</strong> o vendedor, todas as comissões dele e o acesso. Pede a sua senha. Não tem como desfazer.</td></tr>
+    </tbody>
+  </table>
+  <p>Sempre que alguém é desativado ou excluído, as sessões abertas dessa pessoa são encerradas.</p>
+
+  <h3>5.3 Produtos — quanto cada item paga</h3>
+  <p>Aqui você define as regras de comissão. Existem dois tipos de regra:</p>
+  <ul>
+    <li><strong>Percentual</strong> — uma porcentagem sobre o valor da venda (ex.: 5 significa 5%).</li>
+    <li><strong>Valor fixo</strong> — um valor em reais por venda (ex.: 20,00).</li>
+  </ul>
+
+  <h4>Comissão padrão para itens sem regra individual</h4>
+  <p>É a regra usada quando você lança uma comissão escolhendo <strong>“Lançamento manual ou legado”</strong>.</p>
+  <ol class="steps">
+    <li>Em <strong>Modalidade da comissão</strong>, escolha <strong>Percentual</strong> ou <strong>Valor fixo</strong>.</li>
+    <li>Em <strong>Valor da comissão</strong>, digite o número.</li>
+    <li>Clique em <strong>Salvar comissão padrão</strong>.</li>
+  </ol>
+
+  <h4>Cadastrar um produto ou serviço</h4>
+  <ol class="steps">
+    <li>Em <strong>Produto ou serviço</strong>, digite o nome (ex.: <em>Plano anual</em>).</li>
+    <li>Em <strong>Modalidade da regra</strong>, escolha <strong>Percentual</strong> ou <strong>Valor fixo</strong>.</li>
+    <li>Em <strong>Valor da regra</strong>, digite o número.</li>
+    <li>Clique em <strong>Cadastrar produto</strong>.</li>
+  </ol>
+
+  <h4>Botões de cada produto</h4>
+  <table>
+    <thead><tr><th style="width:26%">Botão</th><th>O que faz</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Editar</strong></td><td>Altera nome e regra. Ao mudar a regra, as comissões <strong>pendentes</strong> desse produto são recalculadas (pagas e anuladas não mudam).</td></tr>
+      <tr><td><strong>Desativar</strong></td><td>O produto deixa de aparecer para novos lançamentos. Não apaga nada. É reversível.</td></tr>
+      <tr><td><strong>Reativar</strong></td><td>Volta a deixar o produto disponível.</td></tr>
+      <tr><td><strong>Excluir</strong></td><td><strong>Apaga o produto para sempre.</strong> Pede a sua senha. Só é permitido se <strong>nenhuma</strong> comissão estiver usando o produto.</td></tr>
+    </tbody>
+  </table>
+  <p>A coluna <strong>Pendências afetadas</strong> mostra quantas comissões pendentes foram recalculadas na última alteração de regra.</p>
+
+  <h3>5.4 Comissões — lançar e pagar</h3>
+  <h4>Registrar uma comissão</h4>
+  <ol class="steps">
+    <li>Em <strong>Vendedor</strong>, escolha quem fez a venda.</li>
+    <li>Em <strong>Produto do catálogo</strong>, escolha o produto — a regra de comissão já vem pronta. Ou escolha <strong>“Lançamento manual ou legado”</strong> e preencha <strong>Produto ou serviço (manual ou legado)</strong>; nesse caso vale a <strong>comissão padrão</strong>.</li>
+    <li>Preencha <strong>Valor da venda</strong> (ex.: 1200,00) e <strong>Data da venda</strong>.</li>
+    <li>Se quiser, escreva uma <strong>Observação</strong>.</li>
+    <li>Confira a linha <strong>Prévia da comissão</strong>: ela mostra o valor que será pago antes de você salvar.</li>
+    <li>Clique em <strong>Registrar comissão</strong>.</li>
+  </ol>
+
+  <h4>Botões de cada comissão</h4>
+  <table>
+    <thead><tr><th style="width:26%">Botão</th><th>O que faz</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Editar</strong></td><td>Altera os dados da comissão e recalcula o valor conforme a regra.</td></tr>
+      <tr><td><strong>Anular comissão</strong></td><td>Marca a comissão como <strong>anulada</strong> (cancelada), preservando o registro para auditoria. Só aparece para comissões <strong>pendentes</strong>. Pede a sua senha.</td></tr>
+      <tr><td><strong>Excluir</strong></td><td><strong>Apaga a comissão para sempre.</strong> Pede a sua senha. Funciona para comissões pendentes, pagas ou anuladas.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Marcar comissões como pagas</h4>
+  <ol class="steps">
+    <li>Marque a caixinha na primeira coluna das comissões <strong>pendentes</strong> que você pagou. Somente comissões pendentes podem ser selecionadas.</li>
+    <li>Clique em <strong>Marcar selecionadas como pagas</strong>.</li>
+  </ol>
+
+  <h4>Filtrar e exportar</h4>
+  <ul>
+    <li>Use <strong>Vendedor</strong>, <strong>Data inicial</strong>, <strong>Data final</strong> e <strong>Situação</strong> e clique em <strong>Aplicar filtros</strong>. Em Situação há <strong>Todas</strong>, <strong>Pendente</strong>, <strong>Pago</strong> e <strong>Anulada</strong>.</li>
+    <li>Clique em <strong>Baixar CSV</strong> para baixar uma planilha com o que está filtrado. O arquivo abre no Excel e no Google Planilhas.</li>
+  </ul>
+
+  <h3>5.5 Histórico — o que aconteceu</h3>
+  <p>O <strong>Histórico financeiro</strong> lista os acontecimentos importantes, do mais recente para o mais antigo:</p>
+  <ul>
+    <li><strong>Pagamento</strong> — quando uma comissão foi marcada como paga.</li>
+    <li><strong>Anulação</strong> — quando uma comissão foi cancelada.</li>
+    <li><strong>Arquivamento de administrador</strong> — quando um administrador foi arquivado.</li>
+  </ul>
+  <p>Cada linha mostra vendedor, produto, valor, <strong>Responsável</strong> (quem fez a ação) e data/hora. Havendo novidades, aparece o botão <strong>Atualizar histórico</strong>.</p>
+
+  <h3>5.6 Administradores — outras pessoas que operam o sistema</h3>
+  <ol class="steps">
+    <li>Preencha <strong>Nome</strong>, <strong>Usuário</strong> e <strong>Senha</strong>.</li>
+    <li>Clique em <strong>Cadastrar administrador</strong>.</li>
+  </ol>
+  <p>Na lista, o botão <strong>Arquivar</strong> remove o acesso dessa pessoa (pede a sua senha). Não é possível arquivar a própria conta nem o último administrador ativo.</p>
+
+  <h2 id="vendedor" class="page-break">6. Guia do Vendedor</h2>
+  <p>Ao entrar, o vendedor vê a tela <strong>Minha carteira</strong>, com:</p>
+  <div class="grid-cards">
+    <div class="card">
+      <h4>A receber e Já recebido</h4>
+      <p>Dois números no topo: o total de comissões ainda não pagas e o total já pago a você.</p>
+    </div>
+    <div class="card">
+      <h4>Filtrar por período</h4>
+      <p>Escolha <strong>Data inicial</strong> e <strong>Data final</strong> e clique em <strong>Aplicar período</strong> para ver só um intervalo.</p>
+    </div>
+    <div class="card">
+      <h4>Comissões pagas por mês</h4>
+      <p>Um gráfico de barras mostra quanto foi pago a você em cada mês.</p>
+    </div>
+    <div class="card">
+      <h4>Extrato de comissões</h4>
+      <p>A lista detalhada: Produto, Venda, Comissão, Data e Status (Pendente, Pago ou Anulada).</p>
+    </div>
+    <div class="card">
+      <h4>Alterar minha senha</h4>
+      <p>Informe <strong>Senha atual</strong>, <strong>Nova senha</strong> e <strong>Confirmar nova senha</strong>. Depois de alterar, você entrará novamente.</p>
+    </div>
+    <div class="card">
+      <h4>O que o vendedor não pode</h4>
+      <p>Ver dados de outros vendedores, lançar, editar, pagar ou excluir comissões.</p>
+    </div>
+  </div>
+
+  <h2 id="ajuda">7. Ajuda dentro do sistema</h2>
+  <p>O sistema tem três ajudas, todas na própria tela:</p>
+
+  <h3>Tutorial passo a passo (botão “Ajuda”)</h3>
+  <p>Na primeira vez que você entra, um tutorial abre sozinho. Ele escurece a tela, ilumina o item da vez com um holofote e uma seta e mostra uma miniatura da tela, um ícone e a explicação.</p>
+  <ul>
+    <li>Você avança <strong>clicando no item destacado</strong> ou no botão <strong>Próximo</strong>, e volta com <strong>Anterior</strong>.</li>
+    <li>No fim há uma pergunta rápida de revisão (quiz) com a resposta comentada.</li>
+    <li>Para rever quando quiser, clique em <strong>Ajuda</strong>, no topo da tela.</li>
+  </ul>
+
+  <h3>Modo Dicas (botão “Dicas”)</h3>
+  <p>Clique em <strong>Dicas</strong> para ligar. Com ele ligado, passar o mouse (ou chegar com o teclado) em um botão ou campo mostra uma explicação do que ele faz. Clique de novo para desligar. O sistema lembra a sua escolha.</p>
+
+  <h3>Primeiros passos (lista de tarefas)</h3>
+  <p>Na aba <strong>Resumo</strong> existe uma lista com três tarefas iniciais: cadastrar um vendedor, definir um produto e a comissão padrão, e registrar uma comissão. Cada tarefa é marcada automaticamente quando você a conclui, e a lista avisa quando tudo estiver pronto.</p>
+
+  <h2 id="senha">8. Ações que pedem a sua senha</h2>
+  <p>Algumas ações são delicadas e por isso pedem que você digite a <strong>sua senha atual</strong> antes de continuar:</p>
+  <ul>
+    <li>Desativar vendedor</li>
+    <li>Excluir vendedor</li>
+    <li>Anular comissão</li>
+    <li>Excluir comissão</li>
+    <li>Excluir produto</li>
+    <li>Arquivar administrador</li>
+  </ul>
+  <p>Aparece a janela <strong>“Confirmar ação sensível”</strong>. Digite sua senha e confirme. Se errar a senha, a ação não é feita.</p>
+
+  <h2 id="desativar">9. Desativar, anular ou excluir?</h2>
+  <p>Antes de excluir algo, pergunte-se se <strong>desativar</strong> ou <strong>anular</strong> não resolve. A diferença é importante:</p>
+  <table>
+    <thead><tr><th style="width:30%">Ação</th><th>Reversível?</th><th>O que acontece</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Desativar</strong> (vendedor ou produto)</td>
+        <td>Sim — use <strong>Ativar</strong> ou <strong>Reativar</strong>.</td>
+        <td>Sai de circulação, mas nada é apagado e o histórico continua.</td>
+      </tr>
+      <tr>
+        <td><strong>Anular</strong> (comissão)</td>
+        <td>Sim, no sentido de que o registro fica guardado.</td>
+        <td>A comissão é cancelada e fica fora dos totais, mas continua registrada para auditoria.</td>
+      </tr>
+      <tr>
+        <td><strong>Excluir</strong> (vendedor, produto ou comissão)</td>
+        <td><strong>Não.</strong></td>
+        <td>Apaga de verdade. No caso do vendedor, apaga também todas as comissões dele.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout callout--danger">
+    <p><strong>Importante:</strong> a exclusão não tem como ser desfeita. Se precisar de uma cópia dos dados, baixe antes a <strong>cópia administrativa</strong> na aba Resumo.</p>
+  </div>
+
+  <h2 id="faq" class="page-break">10. Perguntas frequentes</h2>
+
+  <h3>Esqueci minha senha. O que faço?</h3>
+  <p>Peça a um administrador para redefinir. Ele verá uma <strong>senha temporária</strong> na tela e você deve trocá-la depois em <strong>Alterar minha senha</strong>.</p>
+
+  <h3>Desativei um vendedor por engano. Dá para voltar?</h3>
+  <p>Sim. Na lista de vendedores, clique em <strong>Ativar</strong>.</p>
+
+  <h3>Excluí algo por engano. Dá para recuperar?</h3>
+  <p>Não. A exclusão é definitiva. Por isso, mantenha uma <strong>cópia administrativa</strong> baixada de tempos em tempos.</p>
+
+  <h3>Não consigo excluir um produto.</h3>
+  <p>Provavelmente ele está sendo usado por alguma comissão. O sistema avisa: <em>“Este produto está em uso por comissões e não pode ser excluído.”</em> Exclua antes as comissões desse produto (ou apenas <strong>Desative</strong> o produto).</p>
+
+  <h3>Por que uma comissão antiga mudou de valor?</h3>
+  <p>Quando a regra de um produto muda, as comissões <strong>pendentes</strong> daquele produto são recalculadas. Comissões já <strong>pagas</strong> ou <strong>anuladas</strong> nunca mudam.</p>
+
+  <h3>O que é “Lançamento manual ou legado”?</h3>
+  <p>É uma comissão que não usa a regra de um produto específico. Nesse caso vale a <strong>comissão padrão</strong> definida na aba Produtos.</p>
+
+  <h3>Onde vejo quem recebeu o quê?</h3>
+  <p>Na aba <strong>Histórico</strong> (ações) e na aba <strong>Resumo</strong>, em <strong>Totais por vendedor</strong>.</p>
+
+  <h3>Posso usar no celular?</h3>
+  <p>Sim. O sistema se adapta a telas pequenas, mas as tabelas ficam mais confortáveis no computador.</p>
+
+  <h3>O sistema guarda a minha senha no navegador?</h3>
+  <p>Não. A senha é enviada de forma segura e o acesso fica apenas em memória. Ao fechar ou sair, é preciso entrar novamente.</p>
+
+  <h2 id="glossario">11. Glossário simples</h2>
+  <table>
+    <thead><tr><th style="width:30%">Termo</th><th>Significado</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Comissão</strong></td><td>O valor que o vendedor recebe por uma venda.</td></tr>
+      <tr><td><strong>Pendente</strong></td><td>Comissão ainda não paga.</td></tr>
+      <tr><td><strong>Pago</strong></td><td>Comissão já paga ao vendedor.</td></tr>
+      <tr><td><strong>Anulada</strong></td><td>Comissão cancelada: fica registrada, mas não conta nos totais.</td></tr>
+      <tr><td><strong>Percentual</strong></td><td>Regra em que a comissão é uma porcentagem do valor da venda.</td></tr>
+      <tr><td><strong>Valor fixo</strong></td><td>Regra em que a comissão é um valor em reais, igual para toda venda.</td></tr>
+      <tr><td><strong>Comissão padrão</strong></td><td>Regra usada quando o lançamento não usa um produto do catálogo.</td></tr>
+      <tr><td><strong>Catálogo</strong></td><td>Lista de produtos e serviços com suas regras de comissão.</td></tr>
+      <tr><td><strong>CSV</strong></td><td>Arquivo de planilha que abre no Excel e no Google Planilhas.</td></tr>
+      <tr><td><strong>Administrador</strong></td><td>Pessoa com acesso total ao sistema.</td></tr>
+      <tr><td><strong>Vendedor</strong></td><td>Pessoa que vê apenas a própria carteira.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="seguranca">12. Cuidados e segurança</h2>
+  <ul>
+    <li><strong>Nunca</strong> compartilhe sua senha. Cada pessoa deve ter o próprio acesso.</li>
+    <li>Use o botão <strong>Sair</strong> ao terminar, principalmente em computadores compartilhados.</li>
+    <li>Confira sempre o valor na <strong>Prévia da comissão</strong> antes de registrar.</li>
+    <li>Antes de <strong>Excluir</strong>, prefira <strong>Desativar</strong> ou <strong>Anular</strong> quando a intenção for apenas tirar de circulação.</li>
+    <li>Guarde com cuidado o arquivo da <strong>cópia administrativa</strong> e os <strong>CSV</strong>: eles contêm dados financeiros.</li>
+  </ul>
+
+  <h2 id="suporte">13. Suporte</h2>
+  <p>Em caso de dúvida, erro ou acesso bloqueado, procure o responsável pela administração da plataforma na sua empresa.</p>
+
+  <p class="footer-note">Manual do Usuário · Controle de Comissões (Galaxy Smart) · Universe TI<br>
+  Sistema disponível em <strong>https://universeti.vercel.app</strong></p>
+
+</div>
+</body>
+</html>
