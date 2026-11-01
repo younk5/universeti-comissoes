@@ -10,8 +10,6 @@ PostgreSQL via Supabase. Nenhuma URL, chave ou SDK de banco chega ao front-end.
 
 **[▶ Abrir o sistema](https://universeti.vercel.app)**
 
-![Painel do sistema](docs/print-painel.png)
-
 `Node.js` · `PostgreSQL` · `Supabase Auth` · `Vercel` · `Vite`
 
 📘 Manual do usuário em linguagem simples: [`docs/MANUAL-USUARIO.md`](docs/MANUAL-USUARIO.md)
