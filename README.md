@@ -1,5 +1,23 @@
 # Galaxy Smart — Controle de Comissões
 
+Plataforma web para uma rede de lojas administrar vendedores e comissões:
+cadastro de vendedores, lançamento de vendas, cálculo de comissão, solicitações
+de saque e relatórios — com login e permissões por perfil.
+
+A decisão de arquitetura central: **o navegador nunca recebe credencial de banco**.
+O cliente fala apenas com a API Node.js na mesma origem, e só a API acessa o
+PostgreSQL via Supabase. Nenhuma URL, chave ou SDK de banco chega ao front-end.
+
+**[▶ Abrir o sistema](https://universeti.vercel.app)**
+
+![Painel do sistema](docs/print-painel.png)
+
+`Node.js` · `PostgreSQL` · `Supabase Auth` · `Vercel` · `Vite`
+
+📘 Manual do usuário em linguagem simples: [`docs/MANUAL-USUARIO.md`](docs/MANUAL-USUARIO.md)
+
+---
+
 Plataforma hospedada para administrar vendedores e comissões. O navegador fala apenas com a API Node.js na mesma origem; a API usa Supabase Auth e PostgreSQL no servidor. O cliente não recebe URL, chave, SDK ou acesso direto ao banco.
 
 A base começa vazia. Dados de versões locais, `localStorage`, retiradas e backups legados não são importados.
