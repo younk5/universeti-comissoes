@@ -1,6 +1,7 @@
 import { UnauthorizedError } from '../errors.js';
 
 const profileColumns = 'id, username, display_name, tag, role, active, session_not_before';
+const legacyProfileColumns = 'id, username, display_name, role, active, session_not_before';
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function actorFromProfile(profile) {
@@ -16,6 +17,11 @@ function actorFromProfile(profile) {
     tag: profile.tag ?? '',
     active: profile.active,
   };
+}
+
+function hasMissingTag(error) {
+  const source = [error?.code, error?.message, error?.details].join(' ').toLocaleLowerCase('pt-BR');
+  return (error?.code === '42703' || error?.code === 'PGRST204') && /\btag\b/.test(source);
 }
 
 function decodeVerifiedToken(token) {
@@ -55,12 +61,14 @@ export function createAuthenticateRequest({ authClient, adminClient, now = () =>
       .maybeSingle();
     if (registryError || !registrySession) throw new UnauthorizedError();
 
-    const { data: profile, error: profileError } = await adminClient
+    const loadProfile = (columns) => adminClient
       .from('profiles')
-      .select(profileColumns)
+      .select(columns)
       .eq('id', id)
       .eq('active', true)
       .maybeSingle();
+    let { data: profile, error: profileError } = await loadProfile(profileColumns);
+    if (hasMissingTag(profileError)) ({ data: profile, error: profileError } = await loadProfile(legacyProfileColumns));
     if (profileError || !profile) throw new UnauthorizedError();
 
     const sessionNotBefore = Date.parse(profile.session_not_before);

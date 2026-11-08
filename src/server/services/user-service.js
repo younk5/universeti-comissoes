@@ -3,15 +3,21 @@ import { AppError } from '../errors.js';
 import { normalizeIdentifier, validatePassword } from '../domain/validation.js';
 
 const sellerColumns = 'id, email, username, display_name, phone, tag, active';
+const sellerColumnsWithoutTag = 'id, email, username, display_name, phone, active';
 const legacySellerColumns = 'id, email, username, display_name, active';
 
-function hasMissingSellerPhone(error) {
+function hasMissingSellerColumn(error) {
   const source = [error?.code, error?.message, error?.details].join(' ').toLocaleLowerCase('pt-BR');
-  return (error?.code === '42703' || error?.code === 'PGRST204') && /phone/.test(source);
+  return (error?.code === '42703' || error?.code === 'PGRST204') && /\b(phone|tag)\b/.test(source);
 }
 
 function withoutSellerPhone(profile) {
   const { phone: _phone, ...baseProfile } = profile;
+  return baseProfile;
+}
+
+function withoutSellerTag(profile) {
+  const { tag: _tag, ...baseProfile } = profile;
   return baseProfile;
 }
 
@@ -169,19 +175,17 @@ export function createUserService({
   createTemporaryPassword = defaultTemporaryPassword,
 }) {
   async function updateSellerProfile(id, update) {
-    const persist = (columns) => adminClient.from('profiles')
-      .update(update)
+    const persist = (row, columns) => adminClient.from('profiles')
+      .update(row)
       .eq('id', id)
       .eq('role', 'seller')
       .select(columns)
       .maybeSingle();
-    let result = await persist(sellerColumns);
-    if (hasMissingSellerPhone(result.error)) result = await adminClient.from('profiles')
-      .update(withoutSellerPhone(update))
-      .eq('id', id)
-      .eq('role', 'seller')
-      .select(legacySellerColumns)
-      .maybeSingle();
+    let result = await persist(update, sellerColumns);
+    if (hasMissingSellerColumn(result.error)) result = await persist(withoutSellerTag(update), sellerColumnsWithoutTag);
+    if (hasMissingSellerColumn(result.error)) {
+      result = await persist(withoutSellerPhone(withoutSellerTag(update)), legacySellerColumns);
+    }
     return result;
   }
 
@@ -219,19 +223,19 @@ export function createUserService({
           .select(columns)
           .single();
         let inserted = await insertProfile(profile, sellerColumns);
-        let usedLegacyProfile = false;
-        if (hasMissingSellerPhone(inserted.error)) {
-          inserted = await insertProfile(withoutSellerPhone(profile), legacySellerColumns);
-          usedLegacyProfile = true;
+        if (hasMissingSellerColumn(inserted.error)) {
+          inserted = await insertProfile(withoutSellerTag(profile), sellerColumnsWithoutTag);
+        }
+        if (hasMissingSellerColumn(inserted.error)) {
+          inserted = await insertProfile(withoutSellerPhone(withoutSellerTag(profile)), legacySellerColumns);
         }
         if (inserted.error) throw translateUniqueConflict(inserted.error);
         const savedProfile = inserted.data ?? profile;
-        return sellerView(usedLegacyProfile
-          ? {
-            ...savedProfile,
-            phone: sellerInput.phone,
-          }
-          : savedProfile);
+        return sellerView({
+          ...savedProfile,
+          phone: sellerInput.phone,
+          tag: sellerInput.tag,
+        });
       } catch (error) {
         let compensationFailed = false;
         try {
@@ -333,7 +337,8 @@ export function createUserService({
         return query.order('display_name', { ascending: true });
       };
       let result = await list(sellerColumns);
-      if (hasMissingSellerPhone(result.error)) result = await list(legacySellerColumns);
+      if (hasMissingSellerColumn(result.error)) result = await list(sellerColumnsWithoutTag);
+      if (hasMissingSellerColumn(result.error)) result = await list(legacySellerColumns);
       if (result.error) throw result.error;
       return (result.data ?? []).map(sellerView);
     },

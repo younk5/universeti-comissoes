@@ -2,7 +2,13 @@ import { AppError } from '../errors.js';
 import { normalizeIdentifier, validatePassword } from '../domain/validation.js';
 
 const profileColumns = 'id, email, username, display_name, tag, role, active, session_not_before';
+const legacyProfileColumns = 'id, email, username, display_name, role, active, session_not_before';
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function hasMissingTag(error) {
+  const source = [error?.code, error?.message, error?.details].join(' ').toLocaleLowerCase('pt-BR');
+  return (error?.code === '42703' || error?.code === 'PGRST204') && /\btag\b/.test(source);
+}
 
 function sessionClaims(accessToken) {
   const payload = accessToken?.split('.')[1];
@@ -43,13 +49,15 @@ function actorFromProfile(profile) {
 
 export function createSessionService({ authClient, adminClient, now = () => new Date() }) {
   async function activeProfile(filter) {
-    const { data, error } = await adminClient
+    const load = (columns) => adminClient
       .from('profiles')
-      .select(profileColumns)
+      .select(columns)
       .eq(...filter)
       .eq('active', true)
       .maybeSingle();
 
+    let { data, error } = await load(profileColumns);
+    if (hasMissingTag(error)) ({ data, error } = await load(legacyProfileColumns));
     if (error || !data) throw invalidLogin();
     return data;
   }
