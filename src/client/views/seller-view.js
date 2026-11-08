@@ -170,6 +170,7 @@ export function renderSeller(root, { api, actor, onSignOut } = {}) {
     className: 'button button-secondary', text: 'Ajuda', attributes: { type: 'button' },
   });
   heading.append(title, greeting);
+  if (actor?.tag) heading.append(createElement(document, 'span', { className: 'seller-tag', text: actor.tag }));
   header.append(logo, heading, helpMode.button, tourButton, signOutButton);
 
   const content = createElement(document, 'section', { className: 'seller-content' });

@@ -398,6 +398,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
   const sellerUsername = createLabeledControl(document, { id: 'seller-username', label: 'Usuário', required: true, attributes: { autocomplete: 'username' } });
   const sellerPassword = createLabeledControl(document, { id: 'seller-password', label: 'Senha inicial', type: 'password', required: true, attributes: { autocomplete: 'new-password', minlength: '6' } });
   const sellerPhone = createLabeledControl(document, { id: 'seller-phone', label: 'Telefone (opcional)', type: 'tel', attributes: { autocomplete: 'tel' } });
+  const sellerTag = createLabeledControl(document, { id: 'seller-tag', label: 'Tag (opcional)', attributes: { maxlength: '5', placeholder: 'Ex.: SPE' } });
   const sellerFeedback = createElement(document, 'p', {
     className: 'form-feedback',
     attributes: { 'aria-live': 'polite' },
@@ -417,6 +418,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
     sellerUsername.wrapper,
     sellerPassword.wrapper,
     sellerPhone.wrapper,
+    sellerTag.wrapper,
     sellerFeedback,
     sellerRecovery,
     sellerTemporaryPassword,
@@ -892,6 +894,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
     sellerUsername.control.value = '';
     sellerPassword.control.value = '';
     sellerPhone.control.value = '';
+    sellerTag.control.value = '';
     clearSellerTemporaryPassword();
   }
 
@@ -907,6 +910,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
     sellerUsername.control.value = seller.username ?? '';
     sellerPassword.control.value = '';
     sellerPhone.control.value = seller.phone ?? '';
+    sellerTag.control.value = seller.tag ?? '';
     setFeedback(sellerFeedback);
     clearSellerTemporaryPassword();
     sellerName.control.focus();
@@ -2129,6 +2133,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
       name: sellerName.control.value.trim(),
       username: sellerUsername.control.value.trim(),
       phone: sellerPhone.control.value.trim(),
+      tag: sellerTag.control.value.trim(),
     };
     sellerPassword.control.value = '';
     sellerPassword.control.checked = false;
@@ -2289,6 +2294,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
   helpMode.register(sellerUsername.control, 'Usuário para entrar no sistema. Sem espaços nem acentos.');
   helpMode.register(sellerPassword.control, 'Senha inicial do vendedor. Mínimo de 6 caracteres.');
   helpMode.register(sellerPhone.control, 'Telefone de contato (opcional).');
+  helpMode.register(sellerTag.control, 'Tag curta do vendedor, até 5 caracteres (opcional).');
   helpMode.register(sellerSubmit, 'Cria o vendedor ou salva as alterações.');
   helpMode.register(commissionSeller.control, 'Quem fez a venda.');
   helpMode.register(commissionProductId.control, 'Produto do catálogo. A regra de comissão já vem pronta.');
@@ -2353,6 +2359,7 @@ export function renderAdmin(root, { api, actor, onSignOut } = {}) {
       username: sellerUsername.control,
       password: sellerPassword.control,
       phone: sellerPhone.control,
+      tag: sellerTag.control,
     },
     sellerSubmit,
     sellerFeedback,

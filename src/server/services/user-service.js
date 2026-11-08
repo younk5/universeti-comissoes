@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { AppError } from '../errors.js';
 import { normalizeIdentifier, validatePassword } from '../domain/validation.js';
 
-const sellerColumns = 'id, email, username, display_name, phone, active';
+const sellerColumns = 'id, email, username, display_name, phone, tag, active';
 const legacySellerColumns = 'id, email, username, display_name, active';
 
 function hasMissingSellerPhone(error) {
@@ -73,6 +73,13 @@ function parseUsername(value) {
   return { username, usernameNormalized };
 }
 
+function parseTag(value) {
+  const tag = String(value ?? '').trim().toUpperCase();
+  if (!tag) return null;
+  if (tag.length > 5) throw validationError('A tag deve ter no máximo 5 caracteres.');
+  return tag;
+}
+
 function parsePhone(value) {
   const phone = String(value ?? '').trim();
   if (!phone) return null;
@@ -114,6 +121,7 @@ function createInput(input) {
     ...parseUsername(input.username),
     password,
     phone: parsePhone(input.phone),
+    tag: parseTag(input.tag),
   };
 }
 
@@ -132,6 +140,7 @@ function updateInput(input) {
     update.username_normalized = username.usernameNormalized;
   }
   if (Object.hasOwn(input, 'phone')) update.phone = parsePhone(input.phone);
+  if (Object.hasOwn(input, 'tag')) update.tag = parseTag(input.tag);
   return update;
 }
 
@@ -141,6 +150,7 @@ function sellerView(profile) {
     name: profile.display_name,
     username: profile.username,
     phone: profile.phone ?? '',
+    tag: profile.tag ?? '',
     active: profile.active,
   };
 }
@@ -199,6 +209,7 @@ export function createUserService({
         username_normalized: sellerInput.usernameNormalized,
         display_name: sellerInput.name,
         phone: sellerInput.phone,
+        tag: sellerInput.tag,
         role: 'seller',
         active: true,
       };

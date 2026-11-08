@@ -1,7 +1,7 @@
 import { AppError } from '../errors.js';
 import { normalizeIdentifier, validatePassword } from '../domain/validation.js';
 
-const profileColumns = 'id, email, username, display_name, role, active, session_not_before';
+const profileColumns = 'id, email, username, display_name, tag, role, active, session_not_before';
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function sessionClaims(accessToken) {
@@ -36,6 +36,7 @@ function actorFromProfile(profile) {
     role: profile.role,
     name: profile.display_name,
     username: profile.username,
+    tag: profile.tag ?? '',
     active: profile.active,
   };
 }

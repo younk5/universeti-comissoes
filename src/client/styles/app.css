@@ -759,6 +759,17 @@ textarea.form-control:disabled {
   line-height: 1.5;
 }
 
+.seller-tag {
+  justify-self: start;
+  color: #9da7ba;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  opacity: 0.45;
+  text-transform: uppercase;
+}
+
 .seller-content {
   display: grid;
   width: min(100%, 72rem);
